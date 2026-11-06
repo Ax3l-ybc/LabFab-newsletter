@@ -37,8 +37,16 @@ Options :
 |---|---|
 | `--mois 2026-12` | Génère la lettre d'un autre mois |
 | `--edito edito.txt` | Ajoute un édito, écrit en texte simple ; une ligne vide sépare deux paragraphes |
-| `--logo https://…/logo.png` | Adresse du logo. Utilisez un PNG : Gmail et Outlook n'affichent pas le SVG |
+| `--logo https://…/logo.png` | Adresse du logo en PNG (voir ci-dessous) |
 | `--sortie dossier/` | Dossier où écrire la lettre |
+
+## Le logo
+
+Le logo à utiliser est `assets/logo-labfab.png`. Gmail et Outlook n'affichent pas le SVG du site, et ils ont besoin d'une image publique : le dépôt étant privé, ils ne peuvent pas la lire sur GitHub.
+
+1. Dans WordPress, allez dans **Médias → Ajouter**, puis envoyez `assets/logo-labfab.png`.
+2. Copiez l'**adresse du fichier** (elle ressemble à `https://labfab.fr/wp-content/uploads/…/logo-labfab.png`).
+3. Indiquez-la avec `--logo`, ou remplacez la valeur de `LOGO_PAR_DEFAUT` dans `newsletter/__main__.py` pour ne plus avoir à la donner.
 
 ## Envoyer la lettre
 
