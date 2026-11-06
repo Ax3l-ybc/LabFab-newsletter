@@ -37,6 +37,11 @@ def construire_contexte(client: ClientWordPress, mois: date, aujourdhui: date,
     bruts = client.evenements()
     calendriers = {e["id"]: client.calendrier(e["id"]) for e in bruts}
     evenements = contenu.preparer_evenements(bruts, calendriers, p, aujourdhui)
+    # Sans article publié le mois précédent, on raconte les événements qui ont eu lieu.
+    source_passe = "articles"
+    if not articles:
+        articles = contenu.preparer_evenements_passes(bruts, calendriers, p)
+        source_passe = "evenements"
     nom_mois = contenu.MOIS[p.mois.month - 1]
     return {
         "mois": nom_mois,
@@ -48,6 +53,9 @@ def construire_contexte(client: ClientWordPress, mois: date, aujourdhui: date,
         "logo_url": logo_url,
         "articles": articles,
         "evenements": evenements,
+        "source_passe": source_passe,
+        # Règle : sans article ni événement passé le mois précédent, pas de lettre.
+        "a_envoyer": bool(articles),
     }
 
 
@@ -78,12 +86,19 @@ def main(argv: list[str] | None = None) -> int:
     edito = args.edito.read_text(encoding="utf-8") if args.edito else ""
     contexte = construire_contexte(ClientWordPress(), args.mois, date.today(), edito, args.logo)
 
+    if not contexte["a_envoyer"]:
+        print(f"Pas de lettre pour {contexte['mois']} {contexte['annee']} : aucun article publié "
+              f"et aucun événement en {contexte['mois_precedent']}. Rien n'a été généré.")
+        return 0
+
     args.sortie.mkdir(parents=True, exist_ok=True)
     fichier = args.sortie / f"newsletter-{args.mois:%Y-%m}.html"
     fichier.write_text(rendre(contexte), encoding="utf-8")
 
-    print(f"Lettre de {contexte['mois']} {contexte['annee']} : {fichier}")
-    print(f"\nArticles publiés en {contexte['mois_precedent']} : {len(contexte['articles'])}")
+    print(f"Lettre du mois de {contexte['mois']} {contexte['annee']} : {fichier}")
+    rubrique = ("Articles publiés" if contexte["source_passe"] == "articles"
+                else "Aucun article : événements passés")
+    print(f"\n{rubrique} en {contexte['mois_precedent']} : {len(contexte['articles'])}")
     for a in contexte["articles"]:
         print(f"  - {a['titre']}")
     print(f"\nÉvénements en {contexte['mois_suivant']} : {len(contexte['evenements'])}")

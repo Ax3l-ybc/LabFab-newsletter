@@ -128,3 +128,27 @@ def test_listes_vides():
 
 def test_edito_retours_a_la_ligne():
     assert edito_en_html("Une ligne\nUne autre") == "Une ligne<br>Une autre"
+
+
+def test_sans_article_on_parle_des_evenements_du_mois_precedent():
+    evenements = [evenement(1, "Itinérance"), evenement(2, "Atelier Presse DIY"),
+                  evenement(3, "Trop ancien")]
+    calendriers = {
+        1: ics("20261019T100000", "20261019T180000", "IMT Atlantique"),
+        2: ics("20261209T100000", "20261209T123000"),
+        3: ics("20260914T100000", "20260914T120000"),
+    }
+    contexte = construire_contexte(FauxClient([], evenements, calendriers),
+                                   date(2026, 11, 1), date(2026, 11, 1))
+    assert contexte["a_envoyer"] and contexte["source_passe"] == "evenements"
+    (passe,) = contexte["articles"]
+    assert passe["titre"] == "Itinérance"
+    assert passe["categorie"] == "Événement · lun. 19 oct. · IMT Atlantique"
+
+
+def test_rien_le_mois_precedent_pas_de_lettre(tmp_path, monkeypatch, capsys):
+    from newsletter import __main__ as cli
+    monkeypatch.setattr(cli, "ClientWordPress", lambda: FauxClient([], [], {}))
+    assert cli.main(["--mois", "2026-11", "--sortie", str(tmp_path)]) == 0
+    assert list(tmp_path.iterdir()) == []
+    assert "Pas de lettre pour novembre 2026" in capsys.readouterr().out

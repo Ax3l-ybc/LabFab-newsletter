@@ -153,6 +153,32 @@ def preparer_evenements(evenements: list[dict], calendriers: dict[int, str | Non
     return sans_date + [fiche for _, fiche in dates]
 
 
+def preparer_evenements_passes(evenements: list[dict], calendriers: dict[int, str | None],
+                               p: Periode) -> list[dict]:
+    """Événements qui ont eu lieu pendant le mois précédent, présentés comme des articles.
+
+    Sert de rubrique « Ce qui s'est passé » quand aucun article n'a été publié ce mois-là.
+    """
+    passes = []
+    for e in evenements:
+        ics = calendriers.get(e["id"])
+        if ics is None:
+            continue
+        debut, fin, lieu = lire_calendrier(ics)
+        if debut.date() > p.fin_passe or fin.date() < p.debut_passe:
+            continue
+        date_affichee, _ = affichage_dates(debut, fin)
+        passes.append((debut, {
+            "titre": texte_brut(e["title"]["rendered"]),
+            "extrait": resumer(texte_brut(e.get("excerpt", {}).get("rendered", ""))),
+            "url": e["link"],
+            "image_url": image_a_la_une(e),
+            "categorie": f"Événement · {date_affichee}" + (f" · {lieu}" if lieu else ""),
+        }))
+    passes.sort(key=lambda paire: paire[0])
+    return [fiche for _, fiche in passes]
+
+
 def apercu_boite_de_reception(nb_articles: int, nb_evenements: int, mois: str) -> str:
     def pluriel(n: int, mot: str) -> str:
         return f"{n} {mot}{'s' if n > 1 and not mot.endswith('s') else ''}"
