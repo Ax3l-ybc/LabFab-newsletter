@@ -146,7 +146,10 @@
     <!-- ======================================================
          4. ARTICLES DU MOIS PRÉCÉDENT
          La couleur du badge de catégorie tourne sur la palette.
+         Rubrique masquée s'il ne s'est rien passé le mois précédent
+         (la lettre n'est alors envoyée que pour annoncer des événements).
          ====================================================== -->
+    {% if articles %}
     {% set palette = ['#fca1ad', '#7fb3c6', '#a8d88a', '#ffcc68'] %}
     <tr>
       <td class="px" style="padding:0 24px 8px 24px;">
@@ -211,14 +214,8 @@
     {% if not loop.last %}
     <tr><td class="px" style="padding:0 24px;"><div style="border-top:1px solid #e6e6e6; font-size:0; line-height:0;">&nbsp;</div></td></tr>
     {% endif %}
-    {% else %}
-    <!-- Liste vide -->
-    <tr>
-      <td class="px txt" style="padding:20px 24px 28px 24px; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:24px; color:#333333;">
-        Pas de nouvel article ce mois-ci. Retrouvez toutes les publications du réseau sur <a href="https://labfab.fr/les-publications/" class="lnk" style="color:#1f4e5f; text-decoration:underline;">labfab.fr</a>.
-      </td>
-    </tr>
     {% endfor %}
+    {% endif %}
 
     <!-- ======================================================
          5. ÉVÉNEMENTS DU MOIS SUIVANT

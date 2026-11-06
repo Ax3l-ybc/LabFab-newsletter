@@ -122,7 +122,7 @@ def test_rendu_complet():
 
 def test_listes_vides():
     html = rendre(construire_contexte(FauxClient([], [], {}), date(2026, 11, 1), date(2026, 11, 1)))
-    assert "Pas de nouvel article ce mois-ci" in html
+    assert "Ce qui s'est passé" not in html  # rubrique masquée quand elle est vide
     assert "Pas d'événement programmé" in html
 
 
@@ -146,7 +146,15 @@ def test_sans_article_on_parle_des_evenements_du_mois_precedent():
     assert passe["categorie"] == "Événement · lun. 19 oct. · IMT Atlantique"
 
 
-def test_rien_le_mois_precedent_pas_de_lettre(tmp_path, monkeypatch, capsys):
+def test_rien_avant_mais_des_evenements_a_venir_on_envoie():
+    client = FauxClient([], [evenement(1, "Atelier Presse DIY")],
+                        {1: ics("20261209T100000", "20261209T123000")})
+    contexte = construire_contexte(client, date(2026, 12, 1), date(2026, 12, 1))
+    assert contexte["a_envoyer"] and contexte["articles"] == []
+    assert "Atelier Presse DIY" in rendre(contexte)
+
+
+def test_rien_avant_ni_apres_pas_de_lettre(tmp_path, monkeypatch, capsys):
     from newsletter import __main__ as cli
     monkeypatch.setattr(cli, "ClientWordPress", lambda: FauxClient([], [], {}))
     assert cli.main(["--mois", "2026-11", "--sortie", str(tmp_path)]) == 0

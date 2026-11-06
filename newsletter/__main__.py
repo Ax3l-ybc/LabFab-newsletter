@@ -54,8 +54,8 @@ def construire_contexte(client: ClientWordPress, mois: date, aujourdhui: date,
         "articles": articles,
         "evenements": evenements,
         "source_passe": source_passe,
-        # Règle : sans article ni événement passé le mois précédent, pas de lettre.
-        "a_envoyer": bool(articles),
+        # Règle : rien le mois précédent ET rien d'annoncé pour ce mois-ci → pas de lettre.
+        "a_envoyer": bool(articles or evenements),
     }
 
 
@@ -87,8 +87,9 @@ def main(argv: list[str] | None = None) -> int:
     contexte = construire_contexte(ClientWordPress(), args.mois, date.today(), edito, args.logo)
 
     if not contexte["a_envoyer"]:
-        print(f"Pas de lettre pour {contexte['mois']} {contexte['annee']} : aucun article publié "
-              f"et aucun événement en {contexte['mois_precedent']}. Rien n'a été généré.")
+        print(f"Pas de lettre pour {contexte['mois']} {contexte['annee']} : rien ne s'est passé en "
+              f"{contexte['mois_precedent']} et aucun événement n'est prévu en {contexte['mois']}. "
+              "Rien n'a été généré.")
         return 0
 
     args.sortie.mkdir(parents=True, exist_ok=True)

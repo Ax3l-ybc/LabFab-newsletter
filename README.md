@@ -54,7 +54,7 @@ Le modèle contient les balises `{unsubscription_url}` (désinscription) et `{em
 
 - **Articles** : tous les articles (« posts ») publiés entre le 1er et le dernier jour du mois précédent. Le badge affiche leur première catégorie, sauf « Non classé ».
 - **Pas d'article le mois précédent** : la rubrique « Ce qui s'est passé » présente à la place les événements qui ont eu lieu ce mois-là. Leur badge indique la date et le lieu.
-- **Pas d'article ni d'événement le mois précédent** : aucune lettre n'est générée ce mois-là, même s'il y a des événements à venir. Le programme l'indique et s'arrête.
+- **Rien le mois précédent et rien à venir** : si aucun article ni événement n'a eu lieu le mois précédent **et** qu'aucun événement n'est prévu dans le mois de la lettre, aucune lettre n'est générée. Le programme l'indique et s'arrête. S'il n'y a que des événements à venir, la lettre est bien générée.
 - **Événements** : la vraie date est lue dans l'export calendrier du site (`/wp-json/labfab/v1/ics?event_id=…`), pas dans la date de publication.
   - Un événement est retenu s'il a lieu, au moins en partie, pendant le mois de la lettre.
   - Si la lettre est générée en cours de mois, les événements déjà terminés sont écartés.

@@ -8,6 +8,8 @@ from __future__ import annotations
 from datetime import date
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 SITE = "https://labfab.fr"
 
@@ -19,6 +21,11 @@ class ClientWordPress:
         # Le pare-feu du site refuse l'identifiant par défaut « python-requests ».
         self.session.headers["User-Agent"] = "labfab-newsletter/1.0 (+https://labfab.fr)"
         self.delai = delai
+        # Le site refuse parfois une requête quand on en enchaîne plusieurs (erreur 503) :
+        # on réessaie jusqu'à 4 fois en espaçant les tentatives (2 s, 4 s, 8 s, 16 s).
+        reessais = Retry(total=4, backoff_factor=2, status_forcelist=(429, 500, 502, 503, 504),
+                         allowed_methods=("GET",))
+        self.session.mount("https://", HTTPAdapter(max_retries=reessais))
 
     def _liste(self, chemin: str, **params) -> list[dict]:
         """Récupère toutes les pages d'une liste WordPress (100 éléments par page)."""
