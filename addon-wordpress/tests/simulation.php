@@ -154,6 +154,8 @@ echo "Installation\n";
 verifier('pas d\'appel hebdomadaire aux serveurs de l\'éditeur', !isset($GLOBALS['cron']['newsletter_addon_labfab']));
 verifier('tâche quotidienne programmée', (bool) wp_next_scheduled('labfab_newsletter_quotidien'));
 verifier('désactivé par défaut', $addon->reglages()['actif'] === false);
+verifier('envoi automatique décoché par défaut', $addon->reglages()['envoi_auto'] === false);
+verifier('envoi le 28 par défaut', $addon->reglages()['jour_envoi'] === 28);
 verifier('adresse de test = adresse de l\'admin', $addon->reglages()['email_test'] === 'admin@labfab.fr');
 
 echo "\nAutomatisation désactivée, le 25 novembre\n";
@@ -162,7 +164,7 @@ do_action_simule('labfab_newsletter_quotidien');
 verifier('rien n\'est créé', !$tnp->emails && !$GLOBALS['mails']);
 
 echo "\nActivation, avec un édito\n";
-$addon->enregistrer_reglages(['actif' => '1', 'jour_preparation' => '25', 'jour_envoi' => '1', 'heure_envoi' => '9',
+$addon->enregistrer_reglages(['actif' => '1', 'envoi_auto' => '1', 'jour_preparation' => '25', 'jour_envoi' => '1', 'heure_envoi' => '9',
     'email_test' => 'axelle@exemple.fr', 'sujet' => 'La lettre du LabFab – {mois} {annee}',
     'logo_url' => 'https://raw.githubusercontent.com/Ax3l-ybc/LabFab-newsletter/main/assets/logo-labfab.png',
     'edito' => "Bonjour à toutes et tous !\n\nBonne lecture <3"]);
@@ -260,6 +262,41 @@ file_put_contents(sys_get_temp_dir() . '/page-admin.html', '<!doctype html><meta
 $_POST = ['_wpnonce' => 'mauvais', 'labfab_action' => 'enregistrer'];
 try { ob_start(); $addon->page(); ob_end_clean(); $refus = false; } catch (Exception $x) { ob_end_clean(); $refus = true; }
 verifier('formulaire refusé sans jeton de sécurité', $refus);
+
+echo "\nEnvoi le 28 du mois, avant le début du mois de la lettre\n";
+$tnp->emails = []; $tnp->envois = []; $GLOBALS['mails'] = [];
+update_option('labfab_newsletter_historique', []);
+$addon->enregistrer_reglages(['actif' => '1', 'envoi_auto' => '1', 'jour_preparation' => '25', 'jour_envoi' => '28',
+    'heure_envoi' => '9', 'email_test' => 'axelle@exemple.fr']);
+quand('2026-11-25 06:05');
+do_action_simule('labfab_newsletter_quotidien');
+$e = $tnp->get_email(1);
+$attendu = new DateTimeImmutable('2026-11-28 09:00', wp_timezone());
+verifier('lettre de décembre programmée', $e && $e->status === 'sending' && $e->subject === 'La lettre du LabFab – décembre 2026');
+verifier('envoi le 28 novembre à 9 h', $e && (int) $e->send_on === $attendu->getTimestamp(), date('c', (int) ($e->send_on ?? 0)));
+verifier('objet du test « [Test – envoi le 28 novembre à 9h] … »', ($tnp->envois[0]['objet'] ?? '') === '[Test – envoi le 28 novembre à 9h] La lettre du LabFab – décembre 2026', $tnp->envois[0]['objet'] ?? '');
+echo "    → « " . $GLOBALS['mails'][0]['objet'] . " »\n";
+quand('2026-11-27 12:00');
+$_POST = ['_wpnonce' => 'x', 'labfab_action' => ''];
+ob_start(); $addon->page(); $page = ob_get_clean();
+verifier('la page indique l\'envoi automatique', str_contains($page, 'Activée, avec envoi automatique') && str_contains($page, '28 novembre à 9h'));
+
+echo "\nEnvoi automatique décoché\n";
+$tnp->emails = []; $tnp->envois = []; $GLOBALS['mails'] = [];
+update_option('labfab_newsletter_historique', []);
+$addon->enregistrer_reglages(['actif' => '1', 'jour_preparation' => '25', 'jour_envoi' => '28',
+    'heure_envoi' => '9', 'email_test' => 'axelle@exemple.fr']);
+quand('2026-11-25 06:05');
+do_action_simule('labfab_newsletter_quotidien');
+$e = $tnp->get_email(1);
+verifier('lettre créée en brouillon, pas programmée', $e && $e->status === 'new');
+verifier('test quand même envoyé', ($tnp->envois[0]['objet'] ?? '') === '[Test] La lettre du LabFab – décembre 2026', $tnp->envois[0]['objet'] ?? '');
+echo "    → « " . $GLOBALS['mails'][0]['objet'] . " »\n";
+quand('2026-11-26 06:05');
+do_action_simule('labfab_newsletter_quotidien');
+verifier('pas de second brouillon le lendemain', count($tnp->emails) === 1);
+ob_start(); $addon->page(); $page = ob_get_clean();
+verifier('la page indique « sans envoi automatique »', str_contains($page, 'Activée, sans envoi automatique'));
 
 echo "\n$ok réussis, $ko échoués\n";
 exit($ko ? 1 : 0);

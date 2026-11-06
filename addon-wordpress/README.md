@@ -3,13 +3,15 @@
 Extension pour **The Newsletter Plugin**, à installer sur le WordPress de labfab.fr. Elle fait tout le travail **dans WordPress**, sans GitHub ni PC :
 
 1. **Le 25 de chaque mois**, elle prépare la lettre du mois suivant à partir des articles et des événements du site. Elle applique les mêmes règles que le programme Python du dépôt.
-2. Elle crée la lettre dans **Newsletter → Newsletters** et la **programme pour le 1er du mois** à 9 h.
+2. Elle crée la lettre dans **Newsletter → Newsletters** et la **programme pour le 28 du mois à 9 h**, juste avant le début du mois de la lettre.
 3. Elle vous envoie **un exemplaire de test** et un mail récapitulatif, avec le lien pour relire ou annuler la lettre.
-4. **Le 1er**, The Newsletter Plugin l'envoie à toutes les abonné·es confirmé·es, avec les liens de désinscription et les statistiques habituelles.
+4. **Le 28**, The Newsletter Plugin l'envoie à toutes les abonné·es confirmé·es, avec les liens de désinscription et les statistiques habituelles.
 
 S'il ne s'est rien passé le mois précédent et que rien n'est prévu, aucune lettre n'est créée et vous recevez un mail « Pas de newsletter pour … ».
 
-Les jours, l'heure, l'objet, le logo et l'adresse de test sont réglables.
+Les jours, l'heure, l'objet, le logo et l'adresse de test sont réglables. Si le jour d'envoi vient **après** le jour de préparation (par ex. 25 puis 28), la lettre part à la fin du mois en cours. S'il vient **avant** (par ex. 25 puis 1), elle part au début du mois de la lettre.
+
+**Envoi automatique ou non** : avec la case **« Envoyer automatiquement »** décochée, l'addon prépare quand même la lettre et vous envoie le test, mais la laisse en **brouillon**. C'est vous qui l'envoyez depuis Newsletter → Newsletters.
 
 ## Installation
 
@@ -19,9 +21,9 @@ Il faut être **administrateur·rice** du WordPress et avoir **The Newsletter Pl
 2. Dans WordPress : **Extensions → Ajouter une extension → Téléverser une extension**, choisissez le ZIP, puis **Installer maintenant** et **Activer**.
 3. Ouvrez **Newsletter → LabFab automatique**.
 4. Vérifiez les réglages, en particulier l'**adresse de test**. Cliquez sur **Voir l'aperçu** pour contrôler la lettre du mois prochain.
-5. Quand tout vous convient, cochez **Activer la préparation et l'envoi automatiques**, puis enregistrez.
+5. Quand tout vous convient, cochez **Préparer automatiquement la lettre chaque mois**, et, si vous le souhaitez, **Envoyer automatiquement la lettre**. Puis enregistrez.
 
-L'automatisation est **désactivée à l'installation** : rien ne part tant que vous ne l'avez pas activée.
+À l'installation, les deux cases sont **décochées** : rien n'est préparé ni envoyé tant que vous ne les avez pas cochées.
 
 ### Premier essai conseillé
 

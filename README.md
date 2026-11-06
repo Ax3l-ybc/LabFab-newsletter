@@ -36,7 +36,7 @@ Le **25 de chaque mois**, GitHub génère tout seul la lettre du **mois suivant*
 
 ## Directement dans WordPress (addon)
 
-Le dossier [`addon-wordpress/`](addon-wordpress/) contient une extension pour The Newsletter Plugin. Elle fait le même travail directement dans WordPress : elle prépare la lettre le 25, l'envoie en test, puis la programme pour le 1er. Voir [son README](addon-wordpress/README.md) pour l'installer.
+Le dossier [`addon-wordpress/`](addon-wordpress/) contient une extension pour The Newsletter Plugin. Elle fait le même travail directement dans WordPress : elle prépare la lettre le 25, l'envoie en test, puis la programme pour le 28 (ou la laisse en brouillon si l'envoi automatique est décoché). Voir [son README](addon-wordpress/README.md) pour l'installer.
 
 ## En ligne de commande
 

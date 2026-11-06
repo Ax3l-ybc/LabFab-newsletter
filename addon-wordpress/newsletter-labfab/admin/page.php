@@ -28,10 +28,14 @@ $libelles = [
 <div class="wrap">
     <h1>Newsletter LabFab automatique</h1>
     <p>Chaque mois, le <strong><?php echo esc_html($jour_prepa); ?></strong>, cet addon prépare la lettre du mois suivant
-        à partir des articles et des événements du site, vous en envoie un exemplaire de test, puis la programme
-        dans The Newsletter Plugin pour le <strong><?php echo esc_html($r['jour_envoi']); ?></strong> à
-        <strong><?php echo esc_html($r['heure_envoi']); ?> h</strong>.
-        Entre les deux, vous pouvez la relire, la modifier ou l'annuler dans <a href="<?php echo esc_url(admin_url('admin.php?page=newsletter_emails_index')); ?>">Newsletter → Newsletters</a>.</p>
+        à partir des articles et des événements du site et vous en envoie un exemplaire de test.
+        <?php if ($r['envoi_auto']) : ?>
+            Il la programme ensuite dans The Newsletter Plugin pour le <strong><?php echo esc_html(self::date_lisible($this->date_envoi($prochain_mois)->getTimestamp())); ?></strong>
+            (puis à la même date les mois suivants). Entre les deux, vous pouvez la relire, la modifier ou l'annuler dans
+        <?php else : ?>
+            L'envoi automatique étant désactivé, la lettre reste en <strong>brouillon</strong> : vous la relisez et l'envoyez vous-même depuis
+        <?php endif; ?>
+        <a href="<?php echo esc_url(admin_url('admin.php?page=newsletter_emails_index')); ?>">Newsletter → Newsletters</a>.</p>
 
     <?php foreach ($avis as list($type, $texte)) : ?>
         <div class="notice notice-<?php echo esc_attr($type); ?>"><p><?php echo esc_html($texte); ?></p></div>
@@ -41,9 +45,13 @@ $libelles = [
     <table class="widefat striped" style="max-width:820px">
         <tr>
             <th style="width:260px">Automatisation</th>
-            <td><?php echo $r['actif']
-                ? '<strong style="color:#1e7e34">Activée</strong>'
-                : '<strong style="color:#b32d2e">Désactivée</strong> : aucune lettre ne sera préparée automatiquement. Cochez « Activer » dans les réglages ci-dessous.'; ?></td>
+            <td><?php if (!$r['actif']) : ?>
+                    <strong style="color:#b32d2e">Désactivée</strong> : aucune lettre ne sera préparée automatiquement. Cochez « Activer » dans les réglages ci-dessous.
+                <?php elseif ($r['envoi_auto']) : ?>
+                    <strong style="color:#1e7e34">Activée, avec envoi automatique</strong>
+                <?php else : ?>
+                    <strong style="color:#1f4e5f">Activée, sans envoi automatique</strong> : les lettres sont préparées en brouillon.
+                <?php endif; ?></td>
         </tr>
         <tr>
             <th>Prochaine lettre</th>
@@ -57,7 +65,11 @@ $libelles = [
                     préparation à la prochaine vérification.
                 <?php else : ?>
                     préparation le <?php echo esc_html(wp_date('j F Y', $date_prepa->getTimestamp())); ?>,
-                    envoi le <?php echo esc_html(self::date_lisible($this->date_envoi($prochain_mois)->getTimestamp(), true)); ?>.
+                    <?php if ($r['envoi_auto']) : ?>
+                        envoi le <?php echo esc_html(self::date_lisible($this->date_envoi($prochain_mois)->getTimestamp(), true)); ?>.
+                    <?php else : ?>
+                        en brouillon (envoi automatique désactivé).
+                    <?php endif; ?>
                 <?php endif; ?>
             </td>
         </tr>
@@ -101,7 +113,13 @@ $libelles = [
             <tr>
                 <th scope="row">Automatisation</th>
                 <td><label><input type="checkbox" name="reglages[actif]" value="1" <?php checked($r['actif']); ?>>
-                    Activer la préparation et l'envoi automatiques chaque mois</label></td>
+                    Préparer automatiquement la lettre chaque mois</label></td>
+            </tr>
+            <tr>
+                <th scope="row">Envoi</th>
+                <td><label><input type="checkbox" name="reglages[envoi_auto]" value="1" <?php checked($r['envoi_auto']); ?>>
+                    Envoyer automatiquement la lettre aux abonné·es à la date prévue</label>
+                    <p class="description">Décoché : la lettre est créée en <strong>brouillon</strong>, et c'est vous qui l'envoyez depuis Newsletter → Newsletters.</p></td>
             </tr>
             <tr>
                 <th scope="row"><label for="labfab-prepa">Jour de préparation</label></th>
@@ -111,7 +129,9 @@ $libelles = [
             <tr>
                 <th scope="row"><label for="labfab-envoi">Jour et heure d'envoi</label></th>
                 <td>le <input type="number" id="labfab-envoi" name="reglages[jour_envoi]" min="1" max="28" value="<?php echo esc_attr($r['jour_envoi']); ?>" class="small-text">
-                    du mois de la lettre, à <input type="number" name="reglages[heure_envoi]" min="0" max="23" value="<?php echo esc_attr($r['heure_envoi']); ?>" class="small-text"> h</td>
+                    à <input type="number" name="reglages[heure_envoi]" min="0" max="23" value="<?php echo esc_attr($r['heure_envoi']); ?>" class="small-text"> h
+                    <p class="description">Si ce jour vient après le jour de préparation (ex. préparation le 25, envoi le 28), la lettre part à la <strong>fin du mois en cours</strong>, avant le début de son mois.
+                        Sinon (ex. envoi le 1), elle part au début du mois de la lettre.</p></td>
             </tr>
             <tr>
                 <th scope="row"><label for="labfab-test">Adresse de test</label></th>

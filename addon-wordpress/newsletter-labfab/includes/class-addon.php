@@ -48,8 +48,9 @@ class LabFab_Newsletter_Addon extends NewsletterAddon {
     static function reglages_par_defaut() {
         return [
             'actif' => false,
+            'envoi_auto' => false,
             'jour_preparation' => 25,
-            'jour_envoi' => 1,
+            'jour_envoi' => 28,
             'heure_envoi' => 9,
             'email_test' => get_option('admin_email'),
             'sujet' => 'La lettre du LabFab – {mois} {annee}',
@@ -115,11 +116,20 @@ class LabFab_Newsletter_Addon extends NewsletterAddon {
         return ob_get_clean();
     }
 
-    /** Date d'envoi prévue pour la lettre du mois $mois. */
+    /**
+     * Date d'envoi prévue pour la lettre du mois $mois.
+     *
+     * Si le jour d'envoi vient après le jour de préparation (ex. préparation le 25, envoi le 28),
+     * la lettre part à la fin du mois précédent ; sinon (ex. envoi le 1er), au début de son mois.
+     */
     function date_envoi($mois) {
         $r = $this->reglages();
-        return new DateTimeImmutable(
-            sprintf('%s-%02d %02d:00:00', $mois, (int) $r['jour_envoi'], (int) $r['heure_envoi']), wp_timezone());
+        $mois_envoi = new DateTimeImmutable($mois . '-01', wp_timezone());
+        if ((int) $r['jour_envoi'] >= (int) $r['jour_preparation']) {
+            $mois_envoi = $mois_envoi->modify('-1 month');
+        }
+        return $mois_envoi->setDate((int) $mois_envoi->format('Y'), (int) $mois_envoi->format('n'), (int) $r['jour_envoi'])
+            ->setTime((int) $r['heure_envoi'], 0);
     }
 
     /** Ex. « 1er décembre à 9h », ou « mardi 1er décembre 2026 à 9h » avec $complete. */
@@ -163,7 +173,8 @@ class LabFab_Newsletter_Addon extends NewsletterAddon {
         if ($this->deja_traitee($mois)) {
             return;
         }
-        $this->preparer($mois, 'programmer', 'automatique');
+        // Sans envoi automatique, la lettre est seulement créée en brouillon.
+        $this->preparer($mois, $r['envoi_auto'] ? 'programmer' : 'brouillon', 'automatique');
     }
 
     /**
@@ -305,6 +316,7 @@ class LabFab_Newsletter_Addon extends NewsletterAddon {
         $defaut = self::reglages_par_defaut();
         $propre = [
             'actif' => !empty($valeurs['actif']),
+            'envoi_auto' => !empty($valeurs['envoi_auto']),
             'jour_preparation' => min(28, max(1, (int) ($valeurs['jour_preparation'] ?? $defaut['jour_preparation']))),
             'jour_envoi' => min(28, max(1, (int) ($valeurs['jour_envoi'] ?? $defaut['jour_envoi']))),
             'heure_envoi' => min(23, max(0, (int) ($valeurs['heure_envoi'] ?? $defaut['heure_envoi']))),
