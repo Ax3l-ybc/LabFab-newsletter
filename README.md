@@ -9,7 +9,19 @@ La lettre du mois **M** contient :
 
 Le programme produit un fichier HTML. On le relit, puis on l'envoie avec le plugin WordPress **The Newsletter Plugin**, qui gère déjà la liste des abonné·es.
 
-## Installation
+## Sous Windows, par double-clic
+
+1. **Télécharger le projet** : sur la page GitHub du dépôt, bouton vert **Code → Download ZIP**, puis clic droit sur le fichier ZIP → **Extraire tout**.
+2. **Installer**, une seule fois : double-cliquez sur `installer.bat`. Python s'installe tout seul, sans rien d'autre à faire.
+3. **Générer la lettre**, chaque mois : double-cliquez sur `generer.bat`, tapez le mois (par ex. `2026-12`) ou appuyez sur Entrée pour le mois en cours. Le dossier `sortie` s'ouvre avec la lettre.
+
+Pour ajouter un édito, créez un fichier `edito.txt` à côté de `generer.bat` et écrivez-y votre texte : il sera ajouté automatiquement.
+
+Si Windows affiche « Windows a protégé votre ordinateur », cliquez sur **Informations complémentaires → Exécuter quand même**.
+
+Pour récupérer une nouvelle version du programme, téléchargez de nouveau le ZIP. Recopiez votre `edito.txt` dans le nouveau dossier, puis relancez `installer.bat`.
+
+## En ligne de commande
 
 Il faut Python 3.10 ou plus récent.
 
@@ -22,8 +34,6 @@ python -m venv .venv
 ```
 
 (Sous Windows : `.venv\Scripts\pip install -r requirements.txt`.)
-
-## Utilisation
 
 ```bash
 python -m newsletter
