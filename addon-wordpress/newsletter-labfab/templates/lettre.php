@@ -1,0 +1,324 @@
+<?php
+/**
+ * Modèle de la lettre (traduit de templates/template.html du dépôt).
+ *
+ * Variable disponible : $c, le contenu préparé par LabFab_NL_Contenu::construire()
+ * complété de 'logo_url' et 'edito' (HTML déjà échappé).
+ * Les balises {unsubscription_url} et {email_url} sont remplacées par The Newsletter Plugin à l'envoi.
+ */
+defined('ABSPATH') || exit;
+?>
+<!DOCTYPE html>
+<html lang="fr" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>La lettre du LabFab – <?php echo esc_html($c['mois']); ?> <?php echo esc_html($c['annee']); ?></title>
+
+
+<!--[if mso]>
+<noscript><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+<style>
+  /* Outlook Windows ignore les polices web : on force Arial */
+  table, td, h1, h2, h3, p, a, span { font-family: Arial, Helvetica, sans-serif !important; }
+</style>
+<![endif]-->
+
+<style>
+  /* Réinitialisations utiles aux clients mail */
+  body { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+  table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
+  a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+
+  /* --- Mobile : une seule colonne sous 600 px --- */
+  @media screen and (max-width: 600px) {
+    .container { width: 100% !important; }
+    .px { padding-left: 20px !important; padding-right: 20px !important; }
+    .img-full { width: 100% !important; height: auto !important; }
+    .stack { display: block !important; width: 100% !important; box-sizing: border-box; }
+    .date-cell { text-align: left !important; padding: 12px 16px !important; }
+    .event-body { padding: 16px 0 0 0 !important; }
+    .h1 { font-size: 24px !important; line-height: 30px !important; }
+  }
+
+  /* --- Mode sombre (Apple Mail, Outlook macOS/iOS, certains webmails) --- */
+  @media (prefers-color-scheme: dark) {
+    .bg-page { background-color: #121212 !important; }
+    .bg-body { background-color: #1e1e1e !important; }
+    .bg-soft { background-color: #2a2a2a !important; }
+    .txt { color: #f2f2f2 !important; }
+    .txt-muted { color: #c8c8c8 !important; }
+    .lnk { color: #a9d3e3 !important; }
+    /* Les pastels (badges, boutons, dates) gardent un texte foncé : contraste conservé */
+  }
+</style>
+</head>
+
+<body class="bg-page" style="margin:0; padding:0; background-color:#f6f6f6; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+
+<!-- ========================================================
+     1. PREHEADER (texte d'aperçu, invisible dans le corps)
+     Le remplissage &zwnj;&nbsp; empêche le client mail
+     d'afficher la suite du contenu dans l'aperçu.
+     ======================================================== -->
+<div style="display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all;">
+  <?php echo esc_html($c['preheader']); ?>
+</div>
+<div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">
+  &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
+</div>
+
+<!-- Conteneur général pleine largeur -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-page" style="background-color:#f6f6f6;">
+<tr>
+<td align="center" style="padding:16px 8px;">
+
+  <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td><![endif]-->
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="container bg-body" style="width:600px; max-width:600px; background-color:#ffffff;">
+
+    <!-- Lien « Voir dans le navigateur » (haut de mail, discret) -->
+    <tr>
+      <td class="px txt-muted" align="center" style="padding:12px 24px 0 24px; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:18px; color:#555555;">
+        <a href="{email_url}" class="lnk" style="color:#1f4e5f; text-decoration:underline;">Voir cette lettre dans le navigateur</a>
+      </td>
+    </tr>
+
+    <!-- ======================================================
+         2. EN-TÊTE : bandeau 4 couleurs + logo + titre
+         ====================================================== -->
+    <tr>
+      <td style="padding:16px 0 0 0;">
+        <!-- Bandeau quadricolore (identité du réseau) -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td width="25%" height="8" style="background-color:#fca1ad; font-size:0; line-height:0;">&nbsp;</td>
+            <td width="25%" height="8" style="background-color:#7fb3c6; font-size:0; line-height:0;">&nbsp;</td>
+            <td width="25%" height="8" style="background-color:#a8d88a; font-size:0; line-height:0;">&nbsp;</td>
+            <td width="25%" height="8" style="background-color:#ffcc68; font-size:0; line-height:0;">&nbsp;</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td class="px" align="center" style="padding:28px 24px 8px 24px;">
+        <a href="https://labfab.fr" style="text-decoration:none;">
+                    <img src="<?php echo esc_url($c['logo_url']); ?>" width="140" height="158" alt="LabFab – réseau des Fab Labs rennais" style="display:block; width:140px; max-width:100%; height:auto; margin:0 auto; font-family:Arial, Helvetica, sans-serif; font-size:20px; font-weight:bold; color:#222222;">
+        </a>
+      </td>
+    </tr>
+    <tr>
+      <td class="px" align="center" style="padding:8px 24px 28px 24px;">
+        <h1 class="h1 txt" style="margin:0; font-family:'VG5000', Arial, Helvetica, sans-serif; font-size:28px; line-height:34px; font-weight:normal; color:#222222;">
+          La lettre du LabFab – <?php echo esc_html($c['mois']); ?> <?php echo esc_html($c['annee']); ?>
+        </h1>
+      </td>
+    </tr>
+
+    <!-- ======================================================
+         3. ÉDITO (facultatif : bloc masqué si edito est vide)
+         ====================================================== -->
+    <?php if (!empty($c['edito'])) : ?>
+    <tr>
+      <td class="px" style="padding:0 24px 32px 24px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td width="6" style="background-color:#fca1ad; font-size:0; line-height:0;">&nbsp;</td>
+            <td class="bg-soft txt" style="background-color:#fff4f5; padding:20px 22px; font-family:Arial, Helvetica, sans-serif; font-size:17px; line-height:27px; color:#222222;">
+              <?php echo $c['edito']; // déjà converti et échappé ?>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <?php endif; ?>
+
+    <!-- ======================================================
+         4. ARTICLES DU MOIS PRÉCÉDENT
+         La couleur du badge de catégorie tourne sur la palette.
+         Rubrique masquée s'il ne s'est rien passé le mois précédent
+         (la lettre n'est alors envoyée que pour annoncer des événements).
+         ====================================================== -->
+    <?php if ($c['articles']) : ?>
+    <?php $palette = ['#fca1ad', '#7fb3c6', '#a8d88a', '#ffcc68']; ?>
+    <tr>
+      <td class="px" style="padding:0 24px 8px 24px;">
+        <h2 class="txt" style="margin:0; padding-bottom:10px; border-bottom:3px solid #7fb3c6; font-family:'VG5000', Arial, Helvetica, sans-serif; font-size:22px; line-height:28px; font-weight:normal; color:#222222;">
+          Ce qui s'est passé en <?php echo esc_html($c['mois_precedent']); ?>
+        </h2>
+      </td>
+    </tr>
+
+    <?php foreach (array_values($c['articles']) as $i => $article) : ?>
+    <tr>
+      <td class="px" style="padding:20px 24px 28px 24px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <?php if (!empty($article['image_url'])) : ?>
+          <tr>
+            <td style="padding-bottom:16px;">
+              <a href="<?php echo esc_url($article['url']); ?>" style="text-decoration:none;">
+                                <img src="<?php echo esc_url($article['image_url']); ?>" width="552" alt="<?php echo esc_attr($article['titre']); ?>" class="img-full" style="display:block; width:552px; max-width:100%; height:auto; border-radius:6px;">
+              </a>
+            </td>
+          </tr>
+          <?php endif; ?>
+          <?php if (!empty($article['categorie'])) : ?>
+          <tr>
+            <td style="padding-bottom:10px;">
+              <span style="display:inline-block; background-color:<?php echo $palette[$i % 4]; ?>; color:#222222; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:18px; font-weight:bold; padding:4px 10px; border-radius:12px; mso-padding-alt:0;"><?php echo esc_html($article['categorie']); ?></span>
+            </td>
+          </tr>
+          <?php endif; ?>
+          <tr>
+            <td>
+              <h3 style="margin:0 0 8px 0; font-family:Arial, Helvetica, sans-serif; font-size:20px; line-height:26px; font-weight:bold;">
+                <a href="<?php echo esc_url($article['url']); ?>" class="txt" style="color:#222222; text-decoration:none;"><?php echo esc_html($article['titre']); ?></a>
+              </h3>
+            </td>
+          </tr>
+          <tr>
+            <td class="txt" style="padding-bottom:18px; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:24px; color:#333333;">
+              <?php echo esc_html($article['extrait']); ?>
+            </td>
+          </tr>
+          <tr>
+            <td align="left">
+              <!-- Bouton « bulletproof » : VML pour Outlook Windows, lien stylé ailleurs -->
+              <!--[if mso]>
+              <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="<?php echo esc_url($article['url']); ?>" style="height:46px; v-text-anchor:middle; width:180px;" arcsize="50%" stroke="f" fillcolor="#fca1ad">
+                <w:anchorlock/>
+                <center style="color:#222222; font-family:Arial, sans-serif; font-size:16px; font-weight:bold;">Lire la suite</center>
+              </v:roundrect>
+              <![endif]-->
+              <!--[if !mso]><!-->
+              <a href="<?php echo esc_url($article['url']); ?>" aria-label="Lire la suite : <?php echo esc_attr($article['titre']); ?>" style="display:inline-block; background-color:#fca1ad; color:#222222; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:20px; font-weight:bold; text-decoration:none; padding:13px 26px; border-radius:23px;">
+                Lire la suite
+              </a>
+              <!--<![endif]-->
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <?php if ($i < count($c['articles']) - 1) : ?>
+    <tr><td class="px" style="padding:0 24px;"><div style="border-top:1px solid #e6e6e6; font-size:0; line-height:0;">&nbsp;</div></td></tr>
+    <?php endif; ?>
+    <?php endforeach; ?>
+    <?php endif; ?>
+
+    <!-- ======================================================
+         5. ÉVÉNEMENTS DU MOIS SUIVANT
+         Desktop : pastille date à gauche, détails à droite.
+         Mobile  : les deux cellules s'empilent (.stack).
+         ====================================================== -->
+    <tr>
+      <td class="px" style="padding:24px 24px 8px 24px;">
+        <h2 class="txt" style="margin:0; padding-bottom:10px; border-bottom:3px solid #a8d88a; font-family:'VG5000', Arial, Helvetica, sans-serif; font-size:22px; line-height:28px; font-weight:normal; color:#222222;">
+          À venir en <?php echo esc_html($c['mois_suivant']); ?>
+        </h2>
+      </td>
+    </tr>
+
+    <?php if ($c['evenements']) : foreach ($c['evenements'] as $evenement) : ?>
+    <tr>
+      <td class="px" style="padding:20px 24px 4px 24px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <!-- Pastille date -->
+                        <td class="stack" width="130" valign="top" style="width:130px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="date-cell" align="center" style="background-color:#ffcc68; padding:16px 10px; border-radius:6px; font-family:Arial, Helvetica, sans-serif; font-size:17px; line-height:22px; font-weight:bold; color:#222222;">
+                    <?php echo esc_html($evenement['date_affichee']); ?>
+                    <?php if (!empty($evenement['horaires'])) : ?><br><span style="font-size:15px; font-weight:normal;"><?php echo esc_html($evenement['horaires']); ?></span><?php endif; ?>
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <!-- Détails -->
+            <td class="stack event-body" valign="top" style="padding:0 0 0 20px;">
+              <?php if (!empty($evenement['image_url'])) : ?>
+              <a href="<?php echo esc_url($evenement['url']); ?>" style="text-decoration:none;">
+                <img src="<?php echo esc_url($evenement['image_url']); ?>" width="402" alt="<?php echo esc_attr($evenement['titre']); ?>" class="img-full" style="display:block; width:402px; max-width:100%; height:auto; border-radius:6px; margin-bottom:12px;">
+              </a>
+              <?php endif; ?>
+              <h3 style="margin:0 0 6px 0; font-family:Arial, Helvetica, sans-serif; font-size:19px; line-height:25px; font-weight:bold;">
+                <a href="<?php echo esc_url($evenement['url']); ?>" class="txt" style="color:#222222; text-decoration:none;"><?php echo esc_html($evenement['titre']); ?></a>
+              </h3>
+              <?php if (!empty($evenement['lieu'])) : ?>
+              <p class="txt-muted" style="margin:0 0 10px 0; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:24px; color:#444444;">
+                Lieu : <?php echo esc_html($evenement['lieu']); ?>
+              </p>
+              <?php endif; ?>
+              <p style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:24px;">
+                <a href="<?php echo esc_url($evenement['url']); ?>" aria-label="En savoir plus sur <?php echo esc_attr($evenement['titre']); ?>" class="lnk" style="color:#1f4e5f; text-decoration:underline; font-weight:bold;">En savoir plus</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <?php endforeach; else : ?>
+    <!-- Liste vide -->
+    <tr>
+      <td class="px txt" style="padding:20px 24px 4px 24px; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:24px; color:#333333;">
+        Pas d'événement programmé pour l'instant, restez à l'affût ! L'agenda complet est sur <a href="https://labfab.fr/agenda/" class="lnk" style="color:#1f4e5f; text-decoration:underline;">labfab.fr/agenda</a>.
+      </td>
+    </tr>
+    <?php endif; ?>
+
+    <!-- Lien vers l'agenda complet -->
+    <tr>
+      <td class="px" style="padding:24px 24px 36px 24px; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:24px;">
+        <a href="https://labfab.fr/agenda/" class="lnk" style="color:#1f4e5f; text-decoration:underline;">Voir tout l'agenda du réseau</a>
+      </td>
+    </tr>
+
+    <!-- ======================================================
+         6. PIED DE PAGE
+         ====================================================== -->
+    <tr>
+      <td class="px bg-soft" style="background-color:#eef5f8; padding:28px 24px; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:23px; color:#333333;">
+        <p class="txt" style="margin:0 0 12px 0;">
+          Le LabFab réunit les Fab Labs et lieux de fabrication de Rennes et de sa métropole pour que chacun et chacune puisse apprendre, créer et réparer ensemble.
+        </p>
+        <p style="margin:0 0 12px 0;">
+          <a href="https://labfab.fr" class="lnk" style="color:#1f4e5f; text-decoration:underline; font-weight:bold;">labfab.fr</a>
+        </p>
+        <p class="txt-muted" style="margin:0; font-size:14px; line-height:21px; color:#444444;">
+          Vous recevez cette lettre car vous êtes inscrit·e à la newsletter du LabFab.<br>
+          <a href="{unsubscription_url}" class="lnk" style="color:#1f4e5f; text-decoration:underline;">Se désinscrire</a>
+          &nbsp;|&nbsp;
+          <a href="{email_url}" class="lnk" style="color:#1f4e5f; text-decoration:underline;">Voir dans le navigateur</a>
+        </p>
+      </td>
+    </tr>
+
+    <!-- Bandeau de clôture -->
+    <tr>
+      <td style="padding:0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td width="25%" height="6" style="background-color:#fca1ad; font-size:0; line-height:0;">&nbsp;</td>
+            <td width="25%" height="6" style="background-color:#7fb3c6; font-size:0; line-height:0;">&nbsp;</td>
+            <td width="25%" height="6" style="background-color:#a8d88a; font-size:0; line-height:0;">&nbsp;</td>
+            <td width="25%" height="6" style="background-color:#ffcc68; font-size:0; line-height:0;">&nbsp;</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+  </table>
+  <!--[if mso]></td></tr></table><![endif]-->
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>

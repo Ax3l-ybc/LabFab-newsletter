@@ -34,6 +34,10 @@ Le **25 de chaque mois**, GitHub génère tout seul la lettre du **mois suivant*
 - **Relancer à la main** (pour ajouter un édito, ou générer un autre mois) : onglet **Actions → Newsletter → Run workflow**. Laissez le mois vide pour le mois prochain, ou tapez par ex. `2027-01`.
 - **Édito** : créez ou modifiez le fichier `edito.txt` directement sur GitHub (**Add file → Create new file**). Il sera ajouté à chaque lettre : pensez à le changer ou à le vider le mois suivant.
 
+## Directement dans WordPress (addon)
+
+Le dossier [`addon-wordpress/`](addon-wordpress/) contient une extension pour The Newsletter Plugin. Elle fait le même travail directement dans WordPress : elle prépare la lettre le 25, l'envoie en test, puis la programme pour le 1er. Voir [son README](addon-wordpress/README.md) pour l'installer.
+
 ## En ligne de commande
 
 Il faut Python 3.10 ou plus récent.
