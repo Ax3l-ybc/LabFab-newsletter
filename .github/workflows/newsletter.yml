@@ -1,0 +1,128 @@
+# Génère la newsletter du mois suivant, chaque 25 du mois.
+#
+# La lettre est enregistrée dans le dossier lettres/ du dépôt, et un ticket (« issue »)
+# est ouvert pour prévenir qu'elle est prête à être relue et envoyée.
+# On peut aussi la lancer à la main : onglet Actions → Newsletter → Run workflow.
+
+name: Newsletter
+
+on:
+  schedule:
+    # Le 25 de chaque mois à 6 h 17 UTC (7 h 17 ou 8 h 17 à Rennes).
+    - cron: "17 6 25 * *"
+  workflow_dispatch:
+    inputs:
+      mois:
+        description: "Mois de la lettre (AAAA-MM). Vide = le mois prochain."
+        required: false
+        default: ""
+
+permissions:
+  contents: write   # enregistrer la lettre dans lettres/
+  issues: write     # ouvrir le ticket qui prévient que la lettre est prête
+
+concurrency:
+  group: newsletter
+  cancel-in-progress: false
+
+jobs:
+  generer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installer les bibliothèques
+        run: pip install -r requirements.txt
+
+      - name: Vérifier le programme
+        run: python -m pytest -q
+
+      - name: Choisir le mois
+        id: mois
+        env:
+          MOIS_DEMANDE: ${{ inputs.mois }}
+        run: |
+          if [ -n "$MOIS_DEMANDE" ]; then
+            MOIS="$MOIS_DEMANDE"
+          else
+            MOIS=$(date -u -d "$(date -u +%Y-%m-01) +1 month" +%Y-%m)
+          fi
+          echo "mois=$MOIS" >> "$GITHUB_OUTPUT"
+          echo "Lettre du mois : $MOIS"
+
+      - name: Générer la lettre
+        id: lettre
+        env:
+          MOIS: ${{ steps.mois.outputs.mois }}
+        run: |
+          OPTIONS=(--mois "$MOIS" --sortie lettres)
+          if [ -s edito.txt ]; then
+            echo "Édito trouvé : edito.txt"
+            OPTIONS+=(--edito edito.txt)
+          fi
+          python -m newsletter "${OPTIONS[@]}" | tee rapport.txt
+          FICHIER="lettres/newsletter-$MOIS.html"
+          if [ -f "$FICHIER" ]; then
+            echo "fichier=$FICHIER" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Enregistrer la lettre dans le dépôt
+        if: steps.lettre.outputs.fichier != ''
+        env:
+          FICHIER: ${{ steps.lettre.outputs.fichier }}
+          MOIS: ${{ steps.mois.outputs.mois }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FICHIER"
+          if git diff --cached --quiet; then
+            echo "La lettre n'a pas changé depuis la dernière génération."
+          else
+            git commit -m "Newsletter de $MOIS"
+            git push
+          fi
+
+      - name: Prévenir que la lettre est prête
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FICHIER: ${{ steps.lettre.outputs.fichier }}
+          MOIS: ${{ steps.mois.outputs.mois }}
+          DEPOT: ${{ github.repository }}
+          BRANCHE: ${{ github.ref_name }}
+        run: |
+          if [ -n "$FICHIER" ]; then
+            TITRE="Newsletter $MOIS prête à envoyer"
+            {
+              echo "La newsletter de **$MOIS** a été générée."
+              echo
+              echo "- Voir le code à copier : https://github.com/$DEPOT/blob/$BRANCHE/$FICHIER (bouton **Raw**, puis Ctrl+A et Ctrl+C)"
+              echo
+              echo "**Contenu :**"
+              echo '```'
+              cat rapport.txt
+              echo '```'
+              echo
+              echo "**Pour l'envoyer :**"
+              echo "1. Relire la lettre (ajouter un édito si besoin : fichier \`edito.txt\` du dépôt, puis relancer l'action à la main)."
+              echo "2. WordPress → Newsletter → Newsletters → créer une newsletter avec l'éditeur HTML, puis coller le code."
+              echo "3. S'envoyer un **test**, puis envoyer à la liste."
+              echo "4. Fermer ce ticket."
+            } > ticket.md
+          else
+            TITRE="Pas de newsletter pour $MOIS"
+            {
+              echo "Aucune lettre n'a été générée pour **$MOIS** : il ne s'est rien passé le mois précédent et aucun événement n'est prévu."
+              echo
+              echo '```'
+              cat rapport.txt
+              echo '```'
+              echo
+              echo "Si des événements sont ajoutés sur le site d'ici là, relancez l'action à la main (onglet Actions → Newsletter → Run workflow)."
+            } > ticket.md
+          fi
+          gh issue create --repo "$DEPOT" --title "$TITRE" --body-file ticket.md

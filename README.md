@@ -21,6 +21,19 @@ Si Windows affiche « Windows a protégé votre ordinateur », cliquez sur **Inf
 
 Pour récupérer une nouvelle version du programme, téléchargez de nouveau le ZIP. Recopiez votre `edito.txt` dans le nouveau dossier, puis relancez `installer.bat`.
 
+## Automatiquement, avec GitHub Actions
+
+Le **25 de chaque mois**, GitHub génère tout seul la lettre du **mois suivant** : le 25 novembre, celle de décembre.
+
+- La lettre est enregistrée dans le dossier `lettres/` du dépôt.
+- Un **ticket** (onglet **Issues**) s'ouvre : « Newsletter 2026-12 prête à envoyer ». Il contient le lien vers le code à copier et les étapes pour l'envoyer. GitHub vous prévient par mail.
+- S'il n'y a rien à raconter, le ticket s'intitule « Pas de newsletter pour … ».
+
+**Bon à savoir :**
+- Les articles publiés sur le site après le 25 n'y sont pas. Pour en tenir compte, relancez la génération à la main en début de mois.
+- **Relancer à la main** (pour ajouter un édito, ou générer un autre mois) : onglet **Actions → Newsletter → Run workflow**. Laissez le mois vide pour le mois prochain, ou tapez par ex. `2027-01`.
+- **Édito** : créez ou modifiez le fichier `edito.txt` directement sur GitHub (**Add file → Create new file**). Il sera ajouté à chaque lettre : pensez à le changer ou à le vider le mois suivant.
+
 ## En ligne de commande
 
 Il faut Python 3.10 ou plus récent.
