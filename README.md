@@ -42,11 +42,12 @@ Options :
 
 ## Le logo
 
-Le logo à utiliser est `assets/logo-labfab.png`. Gmail et Outlook n'affichent pas le SVG du site, et ils ont besoin d'une image publique : le dépôt étant privé, ils ne peuvent pas la lire sur GitHub.
+Le logo est `assets/logo-labfab.png`. Les logiciels de mail le téléchargent directement depuis ce dépôt GitHub, qui est public.
 
-1. Dans WordPress, allez dans **Médias → Ajouter**, puis envoyez `assets/logo-labfab.png`.
-2. Copiez l'**adresse du fichier** (elle ressemble à `https://labfab.fr/wp-content/uploads/…/logo-labfab.png`).
-3. Indiquez-la avec `--logo`, ou remplacez la valeur de `LOGO_PAR_DEFAUT` dans `newsletter/__main__.py` pour ne plus avoir à la donner.
+Si le dépôt redevient privé, ils ne pourront plus le lire. Il faudra alors :
+1. dans WordPress, aller dans **Médias → Ajouter** et envoyer `assets/logo-labfab.png` ;
+2. copier l'adresse du fichier ;
+3. remplacer `LOGO_PAR_DEFAUT` dans `newsletter/__main__.py` par cette adresse, ou la donner avec `--logo`.
 
 ## Envoyer la lettre
 

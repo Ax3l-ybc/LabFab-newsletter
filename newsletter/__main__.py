@@ -20,7 +20,10 @@ from . import contenu
 from .wordpress import SITE, ClientWordPress
 
 RACINE = Path(__file__).resolve().parent.parent
-LOGO_PAR_DEFAUT = f"{SITE}/wp-content/themes/labfab-theme-test2/img/logo/logo-long.svg"
+# Servi depuis le dépôt GitHub public : si le dépôt redevient privé, il faudra mettre
+# le logo dans la médiathèque WordPress et changer cette adresse.
+LOGO_PAR_DEFAUT = ("https://raw.githubusercontent.com/Ax3l-ybc/LabFab-newsletter/"
+                   "main/assets/logo-labfab.png")
 
 
 def edito_en_html(texte: str) -> Markup:

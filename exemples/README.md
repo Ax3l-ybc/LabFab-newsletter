@@ -19,7 +19,7 @@ Lettres générées avec les vraies données de labfab.fr, prêtes à être test
 - L'affichage sur ordinateur **et** sur téléphone.
 - Les liens « En savoir plus » et « Voir tout l'agenda du réseau ».
 - Le lien **Se désinscrire** : le plugin le remplace par un vrai lien à l'envoi. S'il reste écrit `{unsubscription_url}`, c'est que le code a été collé dans un éditeur qui ne gère pas ces balises.
-- **Le logo** : il ne s'affichera probablement pas dans Gmail ni dans Outlook, car c'est encore un SVG. Le texte « LabFab – réseau des Fab Labs rennais » apparaît à la place. C'est prévu : il faudra une version PNG du logo.
+- **Le logo** : il doit s'afficher en haut de la lettre. Dans Gmail, il faut parfois cliquer sur « Afficher les images ».
 
 ## Générer d'autres exemples
 
