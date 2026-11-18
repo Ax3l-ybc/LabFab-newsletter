@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Newsletter - LabFab automatique
  * Description: Addon pour The Newsletter Plugin. Prépare chaque mois la lettre du LabFab (articles du mois précédent et événements à venir), envoie un test, puis la programme pour tous les abonné·es.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Requires Plugins: newsletter
@@ -13,7 +13,7 @@
 
 defined('ABSPATH') || exit;
 
-define('LABFAB_NL_VERSION', '1.0.0');
+define('LABFAB_NL_VERSION', '1.0.1');
 define('LABFAB_NL_DIR', __DIR__);
 
 // The Newsletter Plugin annonce qu'il est chargé : on démarre l'addon à ce moment-là.

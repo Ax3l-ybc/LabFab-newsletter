@@ -58,6 +58,8 @@ function current_user_can($c) { return true; }
 function wp_die($m) { throw new Exception($m); }
 function sanitize_key($k) { return strtolower(preg_replace('/[^a-z0-9_\-]/i', '', $k)); }
 function wp_unslash($v) { return $v; }
+function get_posts($a) { return array_map(fn($i) => (object) ['ID' => $i], array_keys(LabFab_NL_Source::$donnees['evenements'])); }
+function get_the_title($p) { return LabFab_NL_Source::$donnees['evenements'][$p->ID]['titre']; }
 
 // ---------------------------------------------------------------- The Newsletter Plugin simulé
 class TNP_Email { const STATUS_DRAFT = 'new'; const STATUS_SENT = 'sent'; const STATUS_SENDING = 'sending'; }
@@ -120,7 +122,12 @@ $GLOBALS['wpdb'] = new wpdb_simule();
 // ---------------------------------------------------------------- Source simulée (vraies données du site)
 $donnees = json_decode(file_get_contents(__DIR__ . '/donnees-labfab.json'), true);
 class LabFab_NL_Source {
+    const TYPE_EVENEMENT = 'evenement';
+    const OPTION_INTERNE_INTERDIT = 'labfab_newsletter_appel_interne_interdit';
+    static $methode = 'interne';
     static $donnees; static $panne = false;
+    static function reinitialiser() {}
+    static function calendrier($id) { return self::$donnees['evenements'][$id]['ics'] ?? null; }
     static function articles($debut, $fin) {
         foreach (self::$donnees['cas'] as $c) {
             if (LabFab_NL_Contenu::periode($c['mois'])['debut_passe'] === $debut) return $c['articles_entree'];
@@ -259,6 +266,11 @@ verifier('la page s\'affiche avec l\'aperçu', str_contains($page, 'Aperçu de l
 verifier('résumé du contenu affiché', str_contains($page, 'mer. 9 déc. : Atelier Presse DIY'));
 verifier('historique affiché', str_contains($page, 'Programmée') && str_contains($page, 'Ouvrir la lettre'));
 file_put_contents(sys_get_temp_dir() . '/page-admin.html', '<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="https://labfab.fr/wp-admin/css/common.min.css">' . $page);
+$_POST = ['_wpnonce' => 'x', 'labfab_action' => 'diagnostic'];
+ob_start(); $addon->page(); $page = ob_get_clean();
+verifier('diagnostic : toutes les dates lues', str_contains($page, 'Toutes les dates ont pu être lues (14 événements)'));
+verifier('diagnostic : date et méthode affichées', str_contains($page, 'mer. 9 déc., 10h – 12h30 — Edulab Rennes 2') && str_contains($page, 'interne (sans réseau)'));
+verifier('diagnostic : événement sans date signalé', str_contains($page, 'sans date'));
 $_POST = ['_wpnonce' => 'mauvais', 'labfab_action' => 'enregistrer'];
 try { ob_start(); $addon->page(); ob_end_clean(); $refus = false; } catch (Exception $x) { ob_end_clean(); $refus = true; }
 verifier('formulaire refusé sans jeton de sécurité', $refus);

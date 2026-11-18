@@ -52,7 +52,8 @@ Avant d'activer l'automatisation :
 ## Bon à savoir
 
 - **Les tâches programmées de WordPress se déclenchent lors des visites du site.** Si personne ne visite le site un jour donné, la préparation est décalée à la visite suivante. The Newsletter Plugin fonctionne de la même façon pour ses envois.
-- **Les dates des événements** sont lues dans l'export calendrier du thème du site (`/wp-json/labfab/v1/ics`). Le site s'appelle donc lui-même. Si l'hébergeur bloque ces appels, l'aperçu affiche une erreur ; **Outils → Santé du site** l'indique aussi.
+- **Les dates des événements** sont lues dans l'export calendrier du thème du site (`/wp-json/labfab/v1/ics`). L'addon l'interroge **de l'intérieur de WordPress**, sans passer par le réseau, car l'hébergeur de labfab.fr bloque les requêtes du site vers lui-même (erreur 503). Si cette lecture interne ne marche pas, il essaie l'adresse publique, puis l'adresse locale du serveur. Le bouton **Tester la lecture des dates** montre, pour chaque événement, la date lue et la méthode utilisée.
+- **Ce blocage de l'hébergeur peut aussi gêner les tâches programmées de WordPress**, dont les envois de The Newsletter Plugin. Vérifiez **Newsletter → System → Scheduler** : si le plugin y signale un problème, demandez à l'hébergeur d'autoriser les requêtes de bouclage, ou d'ajouter une tâche cron qui appelle `wp-cron.php` toutes les 5 minutes.
 - **L'addon dépend de The Newsletter Plugin.** Il s'appuie sur la base prévue par l'éditeur pour les extensions, mais ce n'est pas une extension officielle. Après une **mise à jour majeure** du plugin, faites un aperçu et un brouillon de test pour vérifier que tout fonctionne.
 - **L'addon contacte un seul serveur extérieur** : GitHub, pour le logo, et seulement si vous gardez l'adresse par défaut. Il ne contacte pas les serveurs de l'éditeur du plugin.
 - **Si vous désinstallez l'addon**, ses réglages et son historique sont effacés. Les lettres déjà créées restent dans The Newsletter Plugin.
@@ -80,6 +81,11 @@ Compare l'addon au programme Python sur 9 mois de vraies données du site (conte
 php addon-wordpress/tests/simulation.php
 ```
 Simule WordPress et The Newsletter Plugin pour vérifier tout le fonctionnement : tâche quotidienne, programmation, test, absence de doublon, annulation, erreurs, page d'administration.
+
+```bash
+php addon-wordpress/tests/source.php
+```
+Vérifie la lecture des dates des événements : lecture interne, repli sur le réseau, erreurs, export calendrier qui arrête PHP.
 
 Pour rafraîchir l'instantané des données du site (`tests/donnees-labfab.json`) :
 

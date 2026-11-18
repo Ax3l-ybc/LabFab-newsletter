@@ -106,6 +106,52 @@ $libelles = [
         </div>
     <?php endif; ?>
 
+    <h2>Diagnostic</h2>
+    <p>Vérifie que l'addon arrive à lire la vraie date de chaque événement du site. Rien n'est envoyé ni enregistré.</p>
+    <form method="post" style="display:flex; gap:8px; flex-wrap:wrap">
+        <?php wp_nonce_field('labfab_newsletter'); ?>
+        <button class="button" name="labfab_action" value="diagnostic">Tester la lecture des dates</button>
+        <?php if (get_option(LabFab_NL_Source::OPTION_INTERNE_INTERDIT)) : ?>
+            <button class="button" name="labfab_action" value="reessayer">Réessayer la lecture interne</button>
+        <?php endif; ?>
+    </form>
+    <?php if ($diagnostic !== null) :
+        $erreurs = array_filter(array_column($diagnostic, 'erreur'));
+        $methodes = ['interne' => 'interne (sans réseau)', 'publique' => 'adresse publique', 'locale' => 'adresse locale'];
+        ?>
+        <div class="notice notice-<?php echo $erreurs ? 'error' : 'success'; ?> inline" style="max-width:1000px; margin-top:12px">
+            <p><?php echo $erreurs
+                ? esc_html(count($erreurs) . ' événement(s) sur ' . count($diagnostic) . ' sans date lisible.')
+                : esc_html('Toutes les dates ont pu être lues (' . count($diagnostic) . ' événements).'); ?></p>
+        </div>
+        <?php if ($diagnostic) : ?>
+            <table class="widefat striped" style="max-width:1000px; margin-top:8px">
+                <thead><tr><th>Événement</th><th>Date lue</th><th>Méthode</th></tr></thead>
+                <tbody>
+                <?php foreach ($diagnostic as $d) : ?>
+                    <tr>
+                        <td><?php echo esc_html($d['titre']); ?> <span class="description">(n°<?php echo (int) $d['id']; ?>)</span></td>
+                        <td><?php echo $d['erreur']
+                            ? '<span style="color:#b32d2e">' . esc_html($d['erreur']) . '</span>'
+                            : esc_html($d['resultat']); ?></td>
+                        <td><?php echo esc_html($methodes[$d['methode']] ?? ''); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+        <?php if ($erreurs) : ?>
+            <div style="max-width:1000px; background:#fff; border:1px solid #dcdcde; padding:4px 16px; margin-top:12px">
+                <p><strong>Que faire ?</strong></p>
+                <ul style="list-style:disc; padding-left:20px">
+                    <li>Si l'erreur mentionne la méthode <em>interne</em> et « export calendrier introuvable », le thème qui fournit les dates des événements n'est pas actif.</li>
+                    <li>Les méthodes <em>publique</em> et <em>locale</em> passent par le réseau. Une « réponse HTTP 503 » veut dire que l'hébergeur bloque les requêtes du site vers lui-même : <a href="<?php echo esc_url(admin_url('site-health.php')); ?>">Outils → Santé du site</a> le signale (« requête de bouclage »). L'hébergeur peut l'autoriser.</li>
+                    <li>Ce blocage gêne aussi les tâches programmées de WordPress, dont les envois de The Newsletter Plugin : vérifiez <a href="<?php echo esc_url(admin_url('admin.php?page=newsletter_system_scheduler')); ?>">Newsletter → System → Scheduler</a>.</li>
+                </ul>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
+
     <h2>Réglages</h2>
     <form method="post">
         <?php wp_nonce_field('labfab_newsletter'); ?>

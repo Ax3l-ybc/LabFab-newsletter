@@ -330,6 +330,34 @@ class LabFab_Newsletter_Addon extends NewsletterAddon {
         return $propre;
     }
 
+    /**
+     * Essaie de lire les dates de tous les événements et dit, pour chacun, comment ça s'est passé.
+     */
+    function diagnostic() {
+        $lignes = [];
+        $posts = get_posts(['post_type' => LabFab_NL_Source::TYPE_EVENEMENT, 'post_status' => 'publish', 'posts_per_page' => -1]);
+        foreach ($posts as $post) {
+            $ligne = ['id' => $post->ID, 'titre' => LabFab_NL_Contenu::texte_brut(get_the_title($post)),
+                'methode' => '', 'resultat' => '', 'erreur' => ''];
+            try {
+                $ics = LabFab_NL_Source::calendrier($post->ID);
+                $ligne['methode'] = LabFab_NL_Source::$methode;
+                if ($ics === null) {
+                    $ligne['resultat'] = 'sans date';
+                } else {
+                    $lu = LabFab_NL_Contenu::lire_ics($ics, wp_timezone());
+                    $ligne['resultat'] = $lu
+                        ? implode(', ', array_filter(LabFab_NL_Contenu::affichage_dates($lu))) . ($lu['lieu'] ? ' — ' . $lu['lieu'] : '')
+                        : 'fichier calendrier illisible';
+                }
+            } catch (Exception $e) {
+                $ligne['erreur'] = $e->getMessage();
+            }
+            $lignes[] = $ligne;
+        }
+        return $lignes;
+    }
+
     // ------------------------------------------------------------------ Administration
 
     function admin_menu() {
@@ -347,6 +375,7 @@ class LabFab_Newsletter_Addon extends NewsletterAddon {
         }
         $avis = [];
         $apercu = null;
+        $diagnostic = null;
         $action = isset($_POST['labfab_action']) ? sanitize_key($_POST['labfab_action']) : '';
         $mois = isset($_POST['mois']) && preg_match('/^\d{4}-\d{2}$/', $_POST['mois'])
             ? $_POST['mois'] : current_datetime()->modify('first day of next month')->format('Y-m');
@@ -362,6 +391,11 @@ class LabFab_Newsletter_Addon extends NewsletterAddon {
                 } catch (Exception $e) {
                     $avis[] = ['error', $e->getMessage()];
                 }
+            } elseif ($action === 'diagnostic') {
+                $diagnostic = $this->diagnostic();
+            } elseif ($action === 'reessayer') {
+                LabFab_NL_Source::reinitialiser();
+                $diagnostic = $this->diagnostic();
             } elseif ($action === 'brouillon' || $action === 'programmer') {
                 $entree = $this->preparer($mois, $action, 'manuel');
                 $avis[] = [$entree['resultat'] === 'erreur' ? 'error' : ($entree['resultat'] === 'rien' ? 'warning' : 'success'),
