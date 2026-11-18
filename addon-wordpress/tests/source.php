@@ -203,6 +203,38 @@ foreach ($cas as $nom => list($champs, $contenu, $attendu)) {
 }
 $GLOBALS['contenu'] = [];
 
+echo "\nChamps « cachés » de l'extension agenda de labfab.fr (_evenement_…), formats possibles\n";
+$techniques = ['_edit_lock' => '1763470000:1', '_edit_last' => '1', '_thumbnail_id' => '2001',
+    '_yoast_wpseo_estimated-reading-time-minutes' => '2', 'cmplz_hide_cookiebanner' => ''];
+$cas = [
+    'liste de dates + horaires début/fin' => [['_evenement_date_type' => 'unique', '_evenement_dates' => ['2026-12-09'],
+        '_evenement_horaire_type' => 'plage', '_evenement_horaires' => ['debut' => '10:00', 'fin' => '12:30'], '_evenement_lieu' => 'Edulab Rennes 2'],
+        'mer. 9 déc., 10h – 12h30 — Edulab Rennes 2'],
+    'date JJ/MM/AAAA + horaires en texte' => [['_evenement_dates' => '09/12/2026', '_evenement_horaires' => '10h - 12h30'], 'mer. 9 déc., 10h – 12h30'],
+    'plage de dates en texte' => [['_evenement_date_type' => 'plage', '_evenement_dates' => '19/10/2026 - 20/10/2026'], 'lun. 19 oct. → mar. 20 oct.'],
+    'plage « du … au … » et horaires « de … à … »' => [['_evenement_dates' => 'du 2026-10-19 au 2026-10-20', '_evenement_horaires' => 'de 10:00 à 18:00'],
+        'lun. 19 oct. → mar. 20 oct.'],
+    'dates ACF en liste de séances' => [['_evenement_dates' => [['date' => '20261014', 'heure_debut' => '10:00:00', 'heure_fin' => '12:00:00']]],
+        'mer. 14 oct., 10h – 12h'],
+    'antennes liées, sans lieu' => [['_evenement_dates' => ['2026-09-26'], '_evenement_horaires' => ['13:00', '19:00'],
+        '_evenement_antennes' => ['12', '13'], '_evenement_lieu' => ''], 'sam. 26 sept., 13h – 19h — Edulab Rennes 2, IMT Atlantique'],
+    'le lieu passe avant les antennes' => [['_evenement_antennes' => ['13'], '_evenement_lieu' => 'Edulab Rennes 2', '_evenement_dates' => ['2026-12-09']],
+        'mer. 9 déc. — Edulab Rennes 2'],
+    'champs techniques seuls : pas de date' => [[], 'rien'],
+];
+foreach ($cas as $nom => list($champs, $attendu)) {
+    remise_a_zero();
+    update_option('labfab_newsletter_appel_interne_interdit', 1);
+    $GLOBALS['reseau'] = ['publique' => 503, 'locale' => 503];
+    $GLOBALS['meta'] = [$i => $techniques + $champs];
+    $ics = LabFab_NL_Source::calendrier($i);
+    $lu = $ics ? LabFab_NL_Contenu::lire_ics($ics, $tz) : null;
+    $obtenu = $lu ? implode(', ', array_filter(LabFab_NL_Contenu::affichage_dates($lu))) . ($lu['lieu'] ? ' — ' . $lu['lieu'] : '') : 'rien';
+    verifier($nom, $obtenu === $attendu, $obtenu);
+    $i++;
+}
+
+
 remise_a_zero();
 update_option('labfab_newsletter_appel_interne_interdit', 1);
 $GLOBALS['meta'] = [2004 => ['sous_titre' => 'Ateliers'], 1993 => ['date_debut' => '20261209', 'heure_debut' => '10:00']];

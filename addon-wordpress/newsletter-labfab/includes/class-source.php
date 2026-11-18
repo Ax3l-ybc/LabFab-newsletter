@@ -259,8 +259,16 @@ class LabFab_NL_Source {
             }
             if ($d = self::reconnaitre_date($v)) {
                 $dates[$cle] = $d;
-            } elseif (preg_match('/^(\d{1,2})\s*[:h]\s*(\d{2})?(?::\d{2})?$/i', $v, $m) && (int) $m[1] < 24) {
-                $heures[$cle] = sprintf('%02d:%s', $m[1], isset($m[2]) && $m[2] !== '' ? $m[2] : '00');
+            } elseif ($h = self::reconnaitre_heure($v)) {
+                $heures[$cle] = $h;
+            } elseif ($plage = self::couper_plage($v)) {
+                if ($plage['type'] === 'date') {
+                    $dates[$cle . '.debut'] = $plage['debut'];
+                    $dates[$cle . '.fin'] = $plage['fin'];
+                } else {
+                    $heures[$cle . '.debut'] = $plage['debut'];
+                    $heures[$cle . '.fin'] = $plage['fin'];
+                }
             }
         }
         if (!$dates) {
@@ -283,6 +291,16 @@ class LabFab_NL_Source {
         }
         $h_fin = $dates[$cle_fin]['h'] ?? null;
         $cle_h_fin = $choisir($heures, true);
+        if (!$cle_h_fin && $cle_h_debut) {
+            // Horaires rangés comme une simple liste de deux heures (ex. ['13:00', '19:00']) : la 2e est la fin.
+            $parent = substr($cle_h_debut, 0, (int) strrpos($cle_h_debut, '.'));
+            foreach (array_keys($heures) as $cle) {
+                if ($cle !== $cle_h_debut && $parent !== '' && strpos($cle, $parent . '.') === 0) {
+                    $cle_h_fin = $cle;
+                    break;
+                }
+            }
+        }
         if ($h_fin === null && $cle_h_fin) {
             $h_fin = $heures[$cle_h_fin];
         }
@@ -293,6 +311,9 @@ class LabFab_NL_Source {
             $h_debut !== null ? $cle_h_debut : null, $h_fin !== null ? $cle_h_fin : null])));
 
         $lieu = null;
+        uksort($lieux, function ($a, $b) {
+            return (int) (bool) preg_match('/lieu|location|adresse/i', $b) <=> (int) (bool) preg_match('/lieu|location|adresse/i', $a);
+        });
         foreach ($lieux as $cle => $valeur) {
             $lieu = self::lieu_lisible($valeur);
             if ($lieu) {
@@ -307,6 +328,18 @@ class LabFab_NL_Source {
             'lieu' => $lieu,
             'champs' => $champs,
         ];
+    }
+
+    /**
+     * Champ à examiner ? Les champs dont le nom commence par « _ » sont d'habitude techniques
+     * (_edit_lock, _thumbnail_id…), mais l'extension « agenda » de labfab.fr range justement ses
+     * dates dans des champs « cachés » : _evenement_dates, _evenement_horaires, _evenement_lieu…
+     */
+    static function champ_utile($cle) {
+        if ($cle === '') {
+            return false;
+        }
+        return $cle[0] !== '_' || (bool) preg_match('/(evenement|event|date|horaire|heure|lieu|antenne)/i', $cle);
     }
 
     /**
@@ -330,7 +363,7 @@ class LabFab_NL_Source {
             }
         };
         foreach ((array) get_post_meta($evenement_id) as $cle => $valeurs) {
-            if ($cle === '' || $cle[0] === '_') {
+            if (!self::champ_utile($cle)) {
                 continue;
             }
             $valeur = maybe_unserialize($valeurs[0] ?? '');
@@ -354,6 +387,37 @@ class LabFab_NL_Source {
             $parcourir(parse_blocks($contenu));
         }
         return $plat;
+    }
+
+    /** Reconnaît « 10:00 », « 10:00:00 », « 10h », « 10h30 », « 10 h 30 ». */
+    static function reconnaitre_heure($v) {
+        if (preg_match('/^(\d{1,2})\s*[:h]\s*(\d{2})?(?::\d{2})?$/i', trim($v), $m) && (int) $m[1] < 24) {
+            return sprintf('%02d:%s', $m[1], isset($m[2]) && $m[2] !== '' ? $m[2] : '00');
+        }
+        return null;
+    }
+
+    /**
+     * Plage écrite en une seule valeur : « 19/10/2026 - 20/10/2026 », « du 19/10/2026 au 20/10/2026 »,
+     * « 10h - 12h30 », « de 10:00 à 12:30 ». On essaie chaque séparateur possible, car « - » apparaît
+     * aussi à l'intérieur des dates AAAA-MM-JJ.
+     */
+    static function couper_plage($v) {
+        $v = preg_replace('/^\s*(du|de|from)\s+/iu', '', trim($v));
+        if (!preg_match_all('/\s*(?:-|–|—|→)\s*|\s+(?:au|à|to|jusqu\'à)\s+/u', $v, $seps, PREG_OFFSET_CAPTURE)) {
+            return null;
+        }
+        foreach ($seps[0] as list($sep, $pos)) {
+            $gauche = trim(substr($v, 0, $pos));
+            $droite = trim(substr($v, $pos + strlen($sep)));
+            if (($d1 = self::reconnaitre_date($gauche)) && ($d2 = self::reconnaitre_date($droite))) {
+                return ['type' => 'date', 'debut' => $d1, 'fin' => $d2];
+            }
+            if (($h1 = self::reconnaitre_heure($gauche)) && ($h2 = self::reconnaitre_heure($droite))) {
+                return ['type' => 'heure', 'debut' => $h1, 'fin' => $h2];
+            }
+        }
+        return null;
     }
 
     /** Reconnaît AAAAMMJJ (ACF), AAAA-MM-JJ[ HH:MM[:SS]], JJ/MM/AAAA[ HH:MM] ou un horodatage Unix. */
@@ -454,7 +518,7 @@ class LabFab_NL_Source {
         }
         $tous = array_keys((array) get_post_meta($evenement_id));
         return ['export' => $export, 'champs' => $champs, 'arret' => get_option(self::OPTION_ARRET, []),
-            'cles_techniques' => array_values(array_filter($tous, function ($c) { return $c !== '' && $c[0] === '_'; }))];
+            'cles_techniques' => array_values(array_filter($tous, function ($c) { return !self::champ_utile($c); }))];
     }
 
     /** 2. Adresse publique du site. */
