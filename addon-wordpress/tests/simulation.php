@@ -127,6 +127,7 @@ class LabFab_NL_Source {
     static $methode = 'interne';
     static $donnees; static $panne = false;
     static $base_champs = [];
+    static $base_trouvees = 14;
     static function reinitialiser() {}
     static function dates_en_base($id) { return null; }
     static function details($id) { return ['export' => 'wp-content/themes/labfab/functions.php, lignes 10 à 40', 'champs' => ['date_debut' => '20261209'], 'arret' => []]; }
