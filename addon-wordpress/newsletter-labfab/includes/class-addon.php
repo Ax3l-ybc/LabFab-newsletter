@@ -366,6 +366,7 @@ class LabFab_Newsletter_Addon extends NewsletterAddon {
         return [
             'lignes' => $lignes,
             'champs_utilises' => LabFab_NL_Source::$base_champs,
+            'base_trouvees' => LabFab_NL_Source::$base_trouvees,
             'exemple' => $exemple ? ['id' => $exemple->ID, 'titre' => LabFab_NL_Contenu::texte_brut(get_the_title($exemple))]
                 + LabFab_NL_Source::details($exemple->ID) : null,
         ];

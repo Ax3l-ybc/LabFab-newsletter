@@ -39,6 +39,14 @@ function get_permalink($p) { return 'https://labfab.fr/?p=' . $p->ID; }
 function get_the_excerpt($p) { return ''; }
 function get_the_post_thumbnail_url($p, $t) { return false; }
 function get_the_date($f, $p) { return '2026-10-01'; }
+$GLOBALS['contenu'] = [];       // contenu brut des événements (blocs)
+function get_post_field($champ, $id) { return $GLOBALS['contenu'][$id] ?? ''; }
+function parse_blocks($c) {     // version simplifiée de l'analyseur de blocs de WordPress
+    preg_match_all('/<!-- wp:([a-z0-9\-\/]+)\s+(\{.*?\})\s+\/?-->/s', $c, $m, PREG_SET_ORDER);
+    return array_map(fn($x) => ['blockName' => str_contains($x[1], '/') ? $x[1] : 'core/' . $x[1],
+        'attrs' => json_decode($x[2], true), 'innerBlocks' => []], $m);
+}
+function wp_json_encode($v) { return json_encode($v, JSON_UNESCAPED_UNICODE); }
 class WP_Error { function __construct(public $c = '', public $m = '') {} function get_error_message() { return $this->m; } }
 function wp_remote_get($url, $args) {
     $GLOBALS['http'][] = ['url' => $url, 'host' => $args['headers']['Host'] ?? null];
@@ -169,6 +177,31 @@ foreach ($cas as $nom => list($champs, $attendu)) {
     $i++;
 }
 verifier('le réseau n\'est essayé qu\'une fois en tout', count($GLOBALS['http']) === 2, count($GLOBALS['http']) . ' requêtes');
+
+echo "\nDates rangées ailleurs que dans des champs simples\n";
+$cas = [
+    'bloc Lazy Blocks dans le contenu' => [[], '<!-- wp:paragraph {"align":"left"} /--><!-- wp:lazyblock/evenement {"date-debut":"2026-12-09T10:00:00","date-fin":"2026-12-09T12:30:00","lieu":"Edulab Rennes 2"} /-->',
+        'mer. 9 déc., 10h – 12h30 — Edulab Rennes 2'],
+    'répéteur (liste de séances)' => [['seances' => [['jour' => '20261019', 'horaire_debut' => '10h', 'horaire_fin' => '18h']]], '', 'lun. 19 oct., 10h – 18h'],
+    'format ISO avec fuseau' => [['event_start' => '2026-10-14T10:00:00+02:00', 'event_end' => '2026-10-14T12:00:00+02:00'], '', 'mer. 14 oct., 10h – 12h'],
+    'date en toutes lettres' => [['quand' => 'mercredi 9 décembre 2026 à 10h'], '', 'mer. 9 déc., 10h'],
+    'horodatage en millisecondes' => [['debut_ms' => (string) ((new DateTimeImmutable('2026-12-09 10:00', $tz))->getTimestamp() * 1000)], '', 'mer. 9 déc., 10h'],
+    'une durée « 2h » n\'est pas une heure de début' => [['date' => '20261209', 'duree' => '2h'], '', 'mer. 9 déc.'],
+    'date de mise à jour ignorée' => [['date_maj' => '2026-09-30', 'date_evenement' => '2026-12-09'], '', 'mer. 9 déc.'],
+];
+foreach ($cas as $nom => list($champs, $contenu, $attendu)) {
+    remise_a_zero();
+    update_option('labfab_newsletter_appel_interne_interdit', 1);
+    $GLOBALS['reseau'] = ['publique' => 503, 'locale' => 503];
+    $GLOBALS['meta'] = [$i => $champs];
+    $GLOBALS['contenu'] = [$i => $contenu];
+    $ics = LabFab_NL_Source::calendrier($i);
+    $lu = $ics ? LabFab_NL_Contenu::lire_ics($ics, $tz) : null;
+    $obtenu = $lu ? implode(', ', array_filter(LabFab_NL_Contenu::affichage_dates($lu))) . ($lu['lieu'] ? ' — ' . $lu['lieu'] : '') : 'rien';
+    verifier($nom, $obtenu === $attendu, $obtenu);
+    $i++;
+}
+$GLOBALS['contenu'] = [];
 
 remise_a_zero();
 update_option('labfab_newsletter_appel_interne_interdit', 1);

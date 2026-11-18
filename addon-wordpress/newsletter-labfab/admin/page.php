@@ -121,10 +121,17 @@ $libelles = [
         $methodes = ['interne' => 'export calendrier (interne)', 'publique' => 'adresse publique',
             'locale' => 'adresse locale', 'base' => 'champs de l\'événement'];
         $par_base = in_array('base', array_column($lignes_diag, 'methode'), true);
+        $aucune_date = $par_base && !$diagnostic['base_trouvees'] && !in_array('interne', array_column($lignes_diag, 'methode'), true);
+        if ($aucune_date) {
+            $erreurs[] = 'aucune date';
+        }
         ?>
         <div class="notice notice-<?php echo $erreurs ? 'error' : ($par_base ? 'warning' : 'success'); ?> inline" style="max-width:1000px; margin-top:12px">
             <p><?php
-                if ($erreurs) {
+                if ($aucune_date) {
+                    echo esc_html('Aucune date n\'a été reconnue : l\'export calendrier du thème n\'est pas accessible, et les dates ne sont pas '
+                        . 'dans un format connu dans les champs des événements. Envoyez une capture des détails techniques ci-dessous.');
+                } elseif ($erreurs) {
                     echo esc_html(count($erreurs) . ' événement(s) sur ' . count($lignes_diag) . ' sans date lisible.');
                 } elseif ($par_base) {
                     echo esc_html('Dates lues dans les champs des événements (' . implode(', ', $diagnostic['champs_utilises'])
@@ -169,7 +176,10 @@ $libelles = [
                     <?php endforeach; ?>
                     </tbody></table>
                 <?php else : ?>
-                    <p>Aucun champ personnalisé.</p>
+                    <p>Aucun champ personnalisé ni bloc avec des réglages dans le contenu.</p>
+                <?php endif; ?>
+                <?php if (!empty($ex['cles_techniques'])) : ?>
+                    <p><strong>Champs techniques (non examinés) :</strong> <code><?php echo esc_html(implode(', ', array_slice($ex['cles_techniques'], 0, 60))); ?></code></p>
                 <?php endif; ?>
             </details>
         <?php endif; ?>

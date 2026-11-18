@@ -233,7 +233,7 @@ class LabFab_NL_Source {
 
     /** Le nom du champ désigne-t-il une fin ? On regarde ses mots : date_fin, dateFin, end_date, heure-de-fin… */
     static function est_fin($cle) {
-        $mots = preg_split('/[_\-\s]+|(?<=[a-z])(?=[A-Z])/', $cle);
+        $mots = preg_split('/[_\-\s.:\/]+|(?<=[a-z])(?=[A-Z])/', $cle);
         return (bool) array_intersect(array_map('strtolower', $mots), ['fin', 'end', 'au', 'to', 'until', 'jusqu', 'jusquau']);
     }
 
@@ -242,11 +242,10 @@ class LabFab_NL_Source {
         $dates = [];   // champ => ['d' => AAAA-MM-JJ, 'h' => HH:MM|null]
         $heures = [];  // champ => HH:MM
         $lieux = [];   // champ => valeur brute
-        foreach ((array) get_post_meta($evenement_id) as $cle => $valeurs) {
-            if ($cle === '' || $cle[0] === '_') {
-                continue;
+        foreach (self::valeurs_evenement($evenement_id) as $cle => $valeur) {
+            if (preg_match('/(publi|modif|creat|cree|expir|maj|update|naissance|duree|duration)/i', $cle)) {
+                continue; // dates qui ne sont pas celles de l'événement
             }
-            $valeur = maybe_unserialize($valeurs[0] ?? '');
             if (preg_match('/(lieu|location|adresse|antenne|place)/i', $cle)) {
                 $lieux[$cle] = $valeur;
                 continue;
@@ -260,8 +259,8 @@ class LabFab_NL_Source {
             }
             if ($d = self::reconnaitre_date($v)) {
                 $dates[$cle] = $d;
-            } elseif (preg_match('/^(\d{1,2})[:h](\d{2})(?::\d{2})?$/i', $v, $m) && (int) $m[1] < 24) {
-                $heures[$cle] = sprintf('%02d:%s', $m[1], $m[2]);
+            } elseif (preg_match('/^(\d{1,2})\s*[:h]\s*(\d{2})?(?::\d{2})?$/i', $v, $m) && (int) $m[1] < 24) {
+                $heures[$cle] = sprintf('%02d:%s', $m[1], isset($m[2]) && $m[2] !== '' ? $m[2] : '00');
             }
         }
         if (!$dates) {
@@ -310,18 +309,77 @@ class LabFab_NL_Source {
         ];
     }
 
+    /**
+     * Toutes les valeurs enregistrées pour un événement, à plat : champs personnalisés (y compris
+     * les champs composés : listes, groupes, répéteurs) et attributs des blocs du contenu
+     * (Lazy Blocks et autres). Clés du type « dates.0.debut » ou « bloc:lazyblock/evenement.date ».
+     * Les champs lieu sont gardés entiers (listes d'identifiants de pages liées).
+     */
+    static function valeurs_evenement($evenement_id) {
+        $plat = [];
+        $aplatir = function ($prefixe, $valeur) use (&$aplatir, &$plat) {
+            if (is_object($valeur)) {
+                $valeur = (array) $valeur;
+            }
+            if (is_array($valeur) && !preg_match('/(lieu|location|adresse|antenne|place)/i', $prefixe)) {
+                foreach ($valeur as $k => $v) {
+                    $aplatir($prefixe . '.' . $k, $v);
+                }
+            } elseif (count($plat) < 400) {
+                $plat[$prefixe] = $valeur;
+            }
+        };
+        foreach ((array) get_post_meta($evenement_id) as $cle => $valeurs) {
+            if ($cle === '' || $cle[0] === '_') {
+                continue;
+            }
+            $valeur = maybe_unserialize($valeurs[0] ?? '');
+            if (is_string($valeur) && ($json = json_decode($valeur, true)) && is_array($json)) {
+                $valeur = $json;
+            }
+            $aplatir($cle, $valeur);
+        }
+        $contenu = (string) get_post_field('post_content', $evenement_id);
+        if ($contenu !== '' && function_exists('parse_blocks')) {
+            $parcourir = function (array $blocs) use (&$parcourir, $aplatir) {
+                foreach ($blocs as $bloc) {
+                    if (!empty($bloc['blockName']) && !empty($bloc['attrs'])) {
+                        $aplatir('bloc:' . $bloc['blockName'], $bloc['attrs']);
+                    }
+                    if (!empty($bloc['innerBlocks'])) {
+                        $parcourir($bloc['innerBlocks']);
+                    }
+                }
+            };
+            $parcourir(parse_blocks($contenu));
+        }
+        return $plat;
+    }
+
     /** Reconnaît AAAAMMJJ (ACF), AAAA-MM-JJ[ HH:MM[:SS]], JJ/MM/AAAA[ HH:MM] ou un horodatage Unix. */
     static function reconnaitre_date($v) {
         if (preg_match('/^(\d{4})(\d{2})(\d{2})$/', $v, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
             return ['d' => "$m[1]-$m[2]-$m[3]", 'h' => null];
         }
-        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::\d{2})?)?$/', $v, $m)
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?)?(?:Z|[+-]\d{2}:?\d{2})?$/', $v, $m)
                 && checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
             return ['d' => "$m[1]-$m[2]-$m[3]", 'h' => isset($m[4]) && "$m[4]:$m[5]" !== '00:00' ? "$m[4]:$m[5]" : null];
         }
-        if (preg_match('#^(\d{2})/(\d{2})/(\d{4})(?:\s+(\d{1,2})[:h](\d{2}))?$#i', $v, $m)
+        if (preg_match('#^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})(?:\s+(?:à\s+)?(\d{1,2})[:h](\d{2}))?$#iu', $v, $m)
                 && checkdate((int) $m[2], (int) $m[1], (int) $m[3])) {
-            return ['d' => "$m[3]-$m[2]-$m[1]", 'h' => isset($m[4]) ? sprintf('%02d:%s', $m[4], $m[5]) : null];
+            return ['d' => sprintf('%s-%02d-%02d', $m[3], $m[2], $m[1]), 'h' => isset($m[4]) ? sprintf('%02d:%s', $m[4], $m[5]) : null];
+        }
+        // « 9 décembre 2026 », « mercredi 9 décembre 2026 à 10h »
+        $mois = implode('|', LabFab_NL_Contenu::MOIS);
+        if (preg_match('/^(?:[a-zéû]+\s+)?(\d{1,2})(?:er)?\s+(' . $mois . ')\s+(\d{4})(?:\s+(?:à\s+)?(\d{1,2})\s*h\s*(\d{2})?)?$/iu', $v, $m)) {
+            $n = array_search(mb_strtolower($m[2], 'UTF-8'), LabFab_NL_Contenu::MOIS, true) + 1;
+            if (checkdate($n, (int) $m[1], (int) $m[3])) {
+                return ['d' => sprintf('%s-%02d-%02d', $m[3], $n, $m[1]),
+                    'h' => isset($m[4]) ? sprintf('%02d:%s', $m[4], ($m[5] ?? '') !== '' ? $m[5] : '00') : null];
+            }
+        }
+        if (preg_match('/^\d{13}$/', $v)) {
+            $v = substr($v, 0, 10); // millisecondes (JavaScript)
         }
         if (preg_match('/^\d{10}$/', $v) && (int) $v > 1420070400 && (int) $v < 2208988800) { // 2015 à 2040
             $d = (new DateTimeImmutable('@' . $v))->setTimezone(wp_timezone());
@@ -391,13 +449,12 @@ class LabFab_NL_Source {
             $export = 'emplacement inconnu';
         }
         $champs = [];
-        foreach ((array) get_post_meta($evenement_id) as $cle => $valeurs) {
-            if ($cle !== '' && $cle[0] !== '_') {
-                $v = maybe_unserialize($valeurs[0] ?? '');
-                $champs[$cle] = mb_substr(is_scalar($v) ? (string) $v : wp_json_encode($v), 0, 120);
-            }
+        foreach (array_slice(self::valeurs_evenement($evenement_id), 0, 80, true) as $cle => $v) {
+            $champs[$cle] = mb_substr(is_scalar($v) || $v === null ? (string) $v : wp_json_encode($v), 0, 120);
         }
-        return ['export' => $export, 'champs' => $champs, 'arret' => get_option(self::OPTION_ARRET, [])];
+        $tous = array_keys((array) get_post_meta($evenement_id));
+        return ['export' => $export, 'champs' => $champs, 'arret' => get_option(self::OPTION_ARRET, []),
+            'cles_techniques' => array_values(array_filter($tous, function ($c) { return $c !== '' && $c[0] === '_'; }))];
     }
 
     /** 2. Adresse publique du site. */
