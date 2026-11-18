@@ -21,11 +21,24 @@ function get_option($k, $d = false) { return $GLOBALS['options'][$k] ?? $d; }
 function update_option($k, $v, $a = null) { $GLOBALS['options'][$k] = $v; return true; }
 function delete_option($k) { unset($GLOBALS['options'][$k]); return true; }
 function apply_filters($h, $v) { return $v; }
+function current_time($t) { return '2026-11-18 15:00:00'; }
+function esc_url($u) { return $u; }
+function admin_url($p) { return 'https://labfab.fr/wp-admin/' . $p; }
 function rest_url($p = '') { return 'https://labfab.fr/wp-json/' . $p; }
 function home_url() { return 'https://labfab.fr'; }
 function wp_parse_url($u) { return parse_url($u); }
 function add_query_arg($k, $v, $u) { return $u . (str_contains($u, '?') ? '&' : '?') . $k . '=' . $v; }
 function is_wp_error($x) { return $x instanceof WP_Error; }
+$GLOBALS['meta'] = [];          // champs des événements : id => [clé => valeur]
+function get_post_meta($id) { return array_map(fn($v) => [is_array($v) ? serialize($v) : $v], $GLOBALS['meta'][$id] ?? []); }
+function maybe_unserialize($v) { return is_string($v) && preg_match('/^a:\d+:/', $v) ? unserialize($v) : $v; }
+function get_the_title($p) { $id = is_object($p) ? $p->ID : $p; return [12 => 'Edulab Rennes 2', 13 => 'IMT Atlantique'][$id] ?? ''; }
+function wp_timezone() { return new DateTimeZone('Europe/Paris'); }
+function get_posts($a) { return array_map(fn($i) => (object) ['ID' => $i], array_keys($GLOBALS['meta'])); }
+function get_permalink($p) { return 'https://labfab.fr/?p=' . $p->ID; }
+function get_the_excerpt($p) { return ''; }
+function get_the_post_thumbnail_url($p, $t) { return false; }
+function get_the_date($f, $p) { return '2026-10-01'; }
 class WP_Error { function __construct(public $c = '', public $m = '') {} function get_error_message() { return $this->m; } }
 function wp_remote_get($url, $args) {
     $GLOBALS['http'][] = ['url' => $url, 'host' => $args['headers']['Host'] ?? null];
@@ -109,17 +122,14 @@ $GLOBALS['http'] = [];
 LabFab_NL_Source::calendrier(1990);
 verifier('l\'adresse publique en échec n\'est pas réessayée pour l\'événement suivant', count($GLOBALS['http']) === 1, json_encode($GLOBALS['http']));
 
-echo "\nTout est bloqué\n";
+echo "\nTout est bloqué, et l'événement n'a aucun champ de date\n";
 remise_a_zero();
 $GLOBALS['route'] = false;
 $GLOBALS['reseau'] = ['publique' => 503, 'locale' => 0];
-try { LabFab_NL_Source::calendrier(1993); $msg = ''; } catch (RuntimeException $e) { $msg = $e->getMessage(); }
-verifier('erreur claire, avec les trois méthodes', str_contains($msg, 'interne : export calendrier introuvable')
-    && str_contains($msg, 'publique : réponse HTTP 503') && str_contains($msg, 'locale : cURL error 28'), $msg);
-echo "    → $msg\n";
+verifier('dernier recours : lecture dans les champs, « sans date »', LabFab_NL_Source::calendrier(1993) === null && LabFab_NL_Source::$methode === 'base');
 $avant = count($GLOBALS['http']);
-try { LabFab_NL_Source::calendrier(1990); } catch (RuntimeException $e) {}
-verifier('pas de nouvelle attente pour l\'événement suivant', count($GLOBALS['http']) === $avant);
+LabFab_NL_Source::calendrier(1990);
+verifier('pas de nouvelle attente réseau pour l\'événement suivant', count($GLOBALS['http']) === $avant);
 
 echo "\nExport calendrier qui arrête PHP (exit)\n";
 $fichier = tempnam(sys_get_temp_dir(), 'labfab');
@@ -133,6 +143,45 @@ $ics = LabFab_NL_Source::calendrier(1993);
 verifier('la fois suivante, la méthode interne est sautée', $GLOBALS['appels_internes'] === 0 && LabFab_NL_Source::$methode === 'publique');
 LabFab_NL_Source::reinitialiser();
 verifier('« Réessayer la lecture interne » la réautorise', get_option('labfab_newsletter_appel_interne_interdit') === false);
+
+echo "\nRéseau bloqué et export calendrier qui arrête la page : dates lues dans les champs — la situation de labfab.fr\n";
+remise_a_zero();
+update_option('labfab_newsletter_appel_interne_interdit', 1);
+$GLOBALS['reseau'] = ['publique' => 503, 'locale' => 503];
+$cas = [
+    'ACF : date + heures séparées, lieu lié' => [['date_debut' => '20261209', 'heure_debut' => '10:00:00', 'date_fin' => '20261209',
+        'heure_fin' => '12:30:00', 'lieux' => ['12'], 'nombre_places' => '12'], 'mer. 9 déc., 10h – 12h30 — Edulab Rennes 2'],
+    'date et heure ensemble (anglais)' => [['start_date' => '2026-10-19 10:00:00', 'end_date' => '2026-10-19 18:00:00', 'location' => 'IMT Atlantique'],
+        'lun. 19 oct., 10h – 18h — IMT Atlantique'],
+    'format JJ/MM/AAAA, nom en camelCase, sur deux jours' => [['dateDebut' => '19/10/2026', 'dateFin' => '20/10/2026'], 'lun. 19 oct. → mar. 20 oct.'],
+    '« calendar_date » n\'est pas pris pour une fin' => [['calendar_date' => '20261014', 'heure' => '14h00'], 'mer. 14 oct., 14h'],
+    'plusieurs lieux liés' => [['date' => '20260926', 'heure_debut' => '13:00', 'heure_fin' => '19:00', 'antennes' => ['12', '13']],
+        'sam. 26 sept., 13h – 19h — Edulab Rennes 2, IMT Atlantique'],
+    'fin avant le début : ignorée' => [['date_debut' => '20261209', 'date_fin' => '20261201'], 'mer. 9 déc.'],
+];
+$i = 100;
+foreach ($cas as $nom => list($champs, $attendu)) {
+    $GLOBALS['meta'] = [$i => $champs];
+    $ics = LabFab_NL_Source::calendrier($i);
+    $lu = $ics ? LabFab_NL_Contenu::lire_ics($ics, $tz) : null;
+    $obtenu = $lu ? implode(', ', array_filter(LabFab_NL_Contenu::affichage_dates($lu))) . ($lu['lieu'] ? ' — ' . $lu['lieu'] : '') : 'rien';
+    verifier($nom, $obtenu === $attendu && LabFab_NL_Source::$methode === 'base', $obtenu);
+    $i++;
+}
+verifier('le réseau n\'est essayé qu\'une fois en tout', count($GLOBALS['http']) === 2, count($GLOBALS['http']) . ' requêtes');
+
+remise_a_zero();
+update_option('labfab_newsletter_appel_interne_interdit', 1);
+$GLOBALS['meta'] = [2004 => ['sous_titre' => 'Ateliers'], 1993 => ['date_debut' => '20261209', 'heure_debut' => '10:00']];
+$evts = LabFab_NL_Source::evenements();
+verifier('événement sans champ de date : « sans date »', $evts[0]['ics'] === null && $evts[1]['ics'] !== null);
+verifier('champs utilisés notés pour le diagnostic', LabFab_NL_Source::$base_champs === ['date_debut', 'heure_debut'], json_encode(LabFab_NL_Source::$base_champs));
+
+remise_a_zero();
+update_option('labfab_newsletter_appel_interne_interdit', 1);
+$GLOBALS['meta'] = [2004 => ['sous_titre' => 'Ateliers'], 1993 => ['texte' => 'bonjour']];
+try { LabFab_NL_Source::evenements(); $msg = ''; } catch (RuntimeException $e) { $msg = $e->getMessage(); }
+verifier('aucune date reconnue nulle part : erreur, pas une lettre sans dates', str_contains($msg, 'aucune date n\'a été reconnue'), $msg);
 
 echo "\n$ok réussis, $ko échoués\n";
 exit($ko ? 1 : 0);

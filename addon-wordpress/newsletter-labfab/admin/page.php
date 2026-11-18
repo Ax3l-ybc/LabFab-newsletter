@@ -116,19 +116,29 @@ $libelles = [
         <?php endif; ?>
     </form>
     <?php if ($diagnostic !== null) :
-        $erreurs = array_filter(array_column($diagnostic, 'erreur'));
-        $methodes = ['interne' => 'interne (sans réseau)', 'publique' => 'adresse publique', 'locale' => 'adresse locale'];
+        $lignes_diag = $diagnostic['lignes'];
+        $erreurs = array_filter(array_column($lignes_diag, 'erreur'));
+        $methodes = ['interne' => 'export calendrier (interne)', 'publique' => 'adresse publique',
+            'locale' => 'adresse locale', 'base' => 'champs de l\'événement'];
+        $par_base = in_array('base', array_column($lignes_diag, 'methode'), true);
         ?>
-        <div class="notice notice-<?php echo $erreurs ? 'error' : 'success'; ?> inline" style="max-width:1000px; margin-top:12px">
-            <p><?php echo $erreurs
-                ? esc_html(count($erreurs) . ' événement(s) sur ' . count($diagnostic) . ' sans date lisible.')
-                : esc_html('Toutes les dates ont pu être lues (' . count($diagnostic) . ' événements).'); ?></p>
+        <div class="notice notice-<?php echo $erreurs ? 'error' : ($par_base ? 'warning' : 'success'); ?> inline" style="max-width:1000px; margin-top:12px">
+            <p><?php
+                if ($erreurs) {
+                    echo esc_html(count($erreurs) . ' événement(s) sur ' . count($lignes_diag) . ' sans date lisible.');
+                } elseif ($par_base) {
+                    echo esc_html('Dates lues dans les champs des événements (' . implode(', ', $diagnostic['champs_utilises'])
+                        . '). Vérifiez qu\'elles correspondent bien aux dates affichées sur le site avant d\'activer l\'envoi automatique.');
+                } else {
+                    echo esc_html('Toutes les dates ont pu être lues (' . count($lignes_diag) . ' événements).');
+                }
+            ?></p>
         </div>
-        <?php if ($diagnostic) : ?>
+        <?php if ($lignes_diag) : ?>
             <table class="widefat striped" style="max-width:1000px; margin-top:8px">
-                <thead><tr><th>Événement</th><th>Date lue</th><th>Méthode</th></tr></thead>
+                <thead><tr><th>Événement</th><th>Date lue</th><th style="width:170px">Méthode</th></tr></thead>
                 <tbody>
-                <?php foreach ($diagnostic as $d) : ?>
+                <?php foreach ($lignes_diag as $d) : ?>
                     <tr>
                         <td><?php echo esc_html($d['titre']); ?> <span class="description">(n°<?php echo (int) $d['id']; ?>)</span></td>
                         <td><?php echo $d['erreur']
@@ -140,13 +150,35 @@ $libelles = [
                 </tbody>
             </table>
         <?php endif; ?>
+        <?php if ($diagnostic['exemple']) : $ex = $diagnostic['exemple']; ?>
+            <details style="max-width:1000px; margin-top:12px; background:#fff; border:1px solid #dcdcde; padding:8px 16px" <?php echo ($erreurs || $par_base) ? 'open' : ''; ?>>
+                <summary><strong>Détails techniques</strong> (à envoyer en capture si les dates sont fausses ou illisibles)</summary>
+                <p><strong>Code de l'export calendrier du thème :</strong> <code><?php echo esc_html($ex['export']); ?></code></p>
+                <?php if (!empty($ex['arret'])) : ?>
+                    <p><strong>Arrêt de la page lors de la lecture interne</strong> (<?php echo esc_html($ex['arret']['date'] ?? ''); ?>) :
+                        <?php echo esc_html(($ex['arret']['erreur'] ?? '') ?: 'pas d\'erreur PHP : l\'export a terminé la page lui-même (exit).'); ?>
+                        <?php if (!empty($ex['arret']['entetes'])) : ?><br>En-têtes : <code><?php echo esc_html(implode(' | ', $ex['arret']['entetes'])); ?></code><?php endif; ?>
+                        <?php if (!empty($ex['arret']['sortie'])) : ?><br>Début de ce qu'il a écrit : <code><?php echo esc_html(mb_substr($ex['arret']['sortie'], 0, 120)); ?></code><?php endif; ?>
+                    </p>
+                <?php endif; ?>
+                <p><strong>Champs enregistrés pour « <?php echo esc_html($ex['titre']); ?> » (n°<?php echo (int) $ex['id']; ?>) :</strong></p>
+                <?php if ($ex['champs']) : ?>
+                    <table class="widefat striped"><tbody>
+                    <?php foreach ($ex['champs'] as $cle => $valeur) : ?>
+                        <tr><td style="width:280px"><code><?php echo esc_html($cle); ?></code></td><td><?php echo esc_html($valeur); ?></td></tr>
+                    <?php endforeach; ?>
+                    </tbody></table>
+                <?php else : ?>
+                    <p>Aucun champ personnalisé.</p>
+                <?php endif; ?>
+            </details>
+        <?php endif; ?>
         <?php if ($erreurs) : ?>
             <div style="max-width:1000px; background:#fff; border:1px solid #dcdcde; padding:4px 16px; margin-top:12px">
-                <p><strong>Que faire ?</strong></p>
+                <p><strong>Que faire ?</strong> Envoyez une capture de cette section (avec les détails techniques) à la personne qui gère l'addon.</p>
                 <ul style="list-style:disc; padding-left:20px">
-                    <li>Si l'erreur mentionne la méthode <em>interne</em> et « export calendrier introuvable », le thème qui fournit les dates des événements n'est pas actif.</li>
-                    <li>Les méthodes <em>publique</em> et <em>locale</em> passent par le réseau. Une « réponse HTTP 503 » veut dire que l'hébergeur bloque les requêtes du site vers lui-même : <a href="<?php echo esc_url(admin_url('site-health.php')); ?>">Outils → Santé du site</a> le signale (« requête de bouclage »). L'hébergeur peut l'autoriser.</li>
-                    <li>Ce blocage gêne aussi les tâches programmées de WordPress, dont les envois de The Newsletter Plugin : vérifiez <a href="<?php echo esc_url(admin_url('admin.php?page=newsletter_system_scheduler')); ?>">Newsletter → System → Scheduler</a>.</li>
+                    <li>Une « réponse HTTP 503 » sur les adresses publique et locale veut dire que l'hébergeur bloque les requêtes du site vers lui-même (<a href="<?php echo esc_url(admin_url('site-health.php')); ?>">Outils → Santé du site</a>).</li>
+                    <li>Ce blocage peut aussi gêner les envois de The Newsletter Plugin : vérifiez <a href="<?php echo esc_url(admin_url('admin.php?page=newsletter_system_scheduler')); ?>">Newsletter → System → Scheduler</a>.</li>
                 </ul>
             </div>
         <?php endif; ?>

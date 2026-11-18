@@ -126,7 +126,10 @@ class LabFab_NL_Source {
     const OPTION_INTERNE_INTERDIT = 'labfab_newsletter_appel_interne_interdit';
     static $methode = 'interne';
     static $donnees; static $panne = false;
+    static $base_champs = [];
     static function reinitialiser() {}
+    static function dates_en_base($id) { return null; }
+    static function details($id) { return ['export' => 'wp-content/themes/labfab/functions.php, lignes 10 à 40', 'champs' => ['date_debut' => '20261209'], 'arret' => []]; }
     static function calendrier($id) { return self::$donnees['evenements'][$id]['ics'] ?? null; }
     static function articles($debut, $fin) {
         foreach (self::$donnees['cas'] as $c) {
@@ -269,7 +272,7 @@ file_put_contents(sys_get_temp_dir() . '/page-admin.html', '<!doctype html><meta
 $_POST = ['_wpnonce' => 'x', 'labfab_action' => 'diagnostic'];
 ob_start(); $addon->page(); $page = ob_get_clean();
 verifier('diagnostic : toutes les dates lues', str_contains($page, 'Toutes les dates ont pu être lues (14 événements)'));
-verifier('diagnostic : date et méthode affichées', str_contains($page, 'mer. 9 déc., 10h – 12h30 — Edulab Rennes 2') && str_contains($page, 'interne (sans réseau)'));
+verifier('diagnostic : date et méthode affichées', str_contains($page, 'mer. 9 déc., 10h – 12h30 — Edulab Rennes 2') && str_contains($page, 'export calendrier (interne)'));
 verifier('diagnostic : événement sans date signalé', str_contains($page, 'sans date'));
 $_POST = ['_wpnonce' => 'mauvais', 'labfab_action' => 'enregistrer'];
 try { ob_start(); $addon->page(); ob_end_clean(); $refus = false; } catch (Exception $x) { ob_end_clean(); $refus = true; }

@@ -355,7 +355,20 @@ class LabFab_Newsletter_Addon extends NewsletterAddon {
             }
             $lignes[] = $ligne;
         }
-        return $lignes;
+        // Détails pour comprendre d'où viennent les dates : un événement daté (l'Atelier Presse DIY s'il existe)
+        $exemple = null;
+        foreach ($posts as $post) {
+            if ($post->ID === 1993 || ($exemple === null && $lignes && LabFab_NL_Source::dates_en_base($post->ID))) {
+                $exemple = $post;
+            }
+        }
+        $exemple = $exemple ?? ($posts[0] ?? null);
+        return [
+            'lignes' => $lignes,
+            'champs_utilises' => LabFab_NL_Source::$base_champs,
+            'exemple' => $exemple ? ['id' => $exemple->ID, 'titre' => LabFab_NL_Contenu::texte_brut(get_the_title($exemple))]
+                + LabFab_NL_Source::details($exemple->ID) : null,
+        ];
     }
 
     // ------------------------------------------------------------------ Administration
